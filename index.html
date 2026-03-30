@@ -559,7 +559,14 @@ const regionCenters = {
     // International
     'VK': {lat: -25.27, lon: 133.77}, 'ZL': {lat: -40.90, lon: 174.88}, 'G': {lat: 55.37, lon: -3.43},
     'DL': {lat: 51.16, lon: 10.45}, 'F': {lat: 46.22, lon: 2.21}, 'I': {lat: 41.87, lon: 12.56},
-    'EA': {lat: 40.46, lon: -3.74}, 'VE': {lat: 56.13, lon: -106.34}, 'JA': {lat: 36.20, lon: 138.25}
+    'JA': {lat: 36.20, lon: 138.25},
+    // SOTA Association fallbacks
+    'W0C': {lat: 39.55, lon: -105.78}, 'W0M': {lat: 46.72, lon: -94.68}, 'W7O': {lat: 43.80, lon: -120.55},
+    'W7W': {lat: 47.75, lon: -120.74}, 'W7M': {lat: 46.87, lon: -110.36}, 'W7N': {lat: 38.80, lon: -116.41},
+    'W3': {lat: 41.20, lon: -77.19}, 'W1': {lat: 42.40, lon: -71.38}, 'W2': {lat: 43.29, lon: -74.21},
+    'W4C': {lat: 35.75, lon: -79.01}, 'W4G': {lat: 32.16, lon: -82.90}, 'W4T': {lat: 35.51, lon: -86.58},
+    'W5': {lat: 34.55, lon: -92.28}, 'W6': {lat: 36.77, lon: -119.41}, 'W8O': {lat: 40.41, lon: -82.90},
+    'W9': {lat: 40.26, lon: -86.12}, 'EI': {lat: 53.41, lon: -8.24}, 'VE': {lat: 56.13, lon: -106.34}
 };
 
 const stateAlias = {
@@ -603,7 +610,13 @@ async function fetchSpots() {
             const data = await response.json();
             data.forEach(s => {
                 const scrapedGrid = extractGrid(s.comments);
-                const coords = scrapedGrid ? gridToCoords(scrapedGrid) : null;
+                let coords = scrapedGrid ? gridToCoords(scrapedGrid) : null;
+                
+                // SOTA Fallback based on association code
+                if (!coords && s.associationCode) {
+                    coords = regionCenters[s.associationCode];
+                }
+
                 allSpots.push({
                     id: `sota-${s.id}`,
                     source: 'sota', activator: s.activatorCallsign,
