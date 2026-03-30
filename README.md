@@ -38,11 +38,21 @@
 
 ---
 
-## ⚙️ Getting Started
-1. **Download**: Save the `spots.html` file to your computer.
-2. **Launch**: Open `spots.html` in any modern web browser (Chrome, Edge, Firefox).
-3. **Configure**: Enter your **Callsign** and **Grid Square** (or use the `🧭` button) to enable distance and bearing calculations.
-4. **Hunt**: Enable the "Audio Notifications" checkbox to receive live Morse alerts for new activations.
+## ⚙️ Getting Started (For Non-Developers)
+
+1.  **[Download W7ARA Spotter-PRO (index.html)](https://raw.githubusercontent.com/msdrapkin/W7ARA-Spotter-PRO/master/index.html)**.
+2.  Your browser will open a page of code. Press **Ctrl + S** (Windows) or **Cmd + S** (Mac) to save it as `spotter.html`.
+3.  Double-click the saved file on your computer to launch the dashboard!
+4.  **Configure**: Enter your **Callsign** and **Grid Square** (or use the `🧭` button) to enable distance and bearing calculations.
+5.  **Hunt**: Enable the "Audio Notifications" checkbox to receive live Morse alerts for new activations.
+
+---
+
+## 🌐 Sharing via GitHub Pages
+If you want to share the tool so others can use it **instantly** without downloading anything:
+1.  Go to [Settings → Pages](https://github.com/msdrapkin/W7ARA-Spotter-PRO/settings/pages).
+2.  Set the Branch to `master` and click **Save**.
+3.  Share your unique link: `https://msdrapkin.github.io/W7ARA-Spotter-PRO/`
 
 ---
 
