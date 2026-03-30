@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CW-PRO // Adaptive Morse Decoder</title>
+    <style>
+        :root {
+            --bg-color: #0d1117;
+            --panel-bg: rgba(22, 27, 34, 0.8);
+            --border-color: #30363d;
+            --accent-color: #58a6ff;
+            --text-color: #c9d1d9;
+            --cw-tone: #00ffcc;
+            --success-color: #238636;
+            --warning-color: #d29922;
+            --danger-color: #da3633;
+            --font-main: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            --font-mono: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: var(--font-main);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            padding: 1rem 2rem;
+            background: rgba(13, 17, 23, 0.9);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            backdrop-filter: blur(10px);
+            z-index: 100;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 800;
+            letter-spacing: 2px;
+            color: var(--accent-color);
+            text-transform: uppercase;
+        }
+
+        .status-container {
+            display: flex;
+            gap: 1.5rem;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--danger-color);
+            box-shadow: 0 0 5px var(--danger-color);
+        }
+
+        .indicator.active {
+            background: var(--cw-tone);
+            box-shadow: 0 0 10px var(--cw-tone);
+        }
+
+        main {
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            grid-template-rows: 1fr 250px;
+            gap: 1px;
+            flex: 1;
+            background: var(--border-color);
+            overflow: hidden;
+        }
+
+        .controls {
+            grid-row: 1 / 3;
+            background: var(--panel-bg);
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            overflow-y: auto;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+        }
+
+        .control-label {
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: #8b949e;
+            letter-spacing: 0.5px;
+        }
+
+        .slider-row {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        input[type="range"] {
+            flex: 1;
+            accent-color: var(--accent-color);
+        }
+
+        .value-display {
+            width: 75px;
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            text-align: right;
+            color: var(--accent-color);
+        }
+
+        .vu-container {
+            height: 12px;
+            background: #000;
+            border-radius: 6px;
+            overflow: hidden;
+            position: relative;
+            margin-top: 0.5rem;
+            border: 1px solid var(--border-color);
+        }
+
+        .vu-bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #238636, #d29922, #da3633);
+            transition: width 0.1s;
+        }
+
+        .vu-threshold {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: white;
+            z-index: 10;
+        }
+
+        button {
+            background: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 0.8rem 1rem;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        button:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+
+        button.secondary {
+            background: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+        }
+
+        button.secondary:hover {
+            border-color: var(--accent-color);
+            color: var(--accent-color);
+        }
+
+        .waterfall-panel {
+            grid-column: 2;
+            grid-row: 1;
+            background: #000;
+            position: relative;
+            overflow: hidden;
+            cursor: crosshair;
+        }
+
+        canvas#waterfall {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        .frequency-strip {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 30px;
+            background: rgba(22, 27, 34, 0.9);
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            padding: 0 1rem;
+            align-items: center;
+            font-size: 0.75rem;
+            font-family: var(--font-mono);
+            color: #8b949e;
+        }
+
+        .center-marker {
+            position: absolute;
+            top: 0;
+            bottom: 30px;
+            width: 2px;
+            background: rgba(0, 255, 204, 0.4);
+            left: 50%;
+            transform: translateX(-50%);
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        .center-marker::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -5px;
+            width: 12px;
+            height: 12px;
+            background: var(--cw-tone);
+            clip-path: polygon(50% 100%, 0 0, 100% 0);
+        }
+
+        .output-panel {
+            grid-column: 2;
+            grid-row: 2;
+            background: var(--panel-bg);
+            display: flex;
+            flex-direction: column;
+            border-top: 1px solid var(--border-color);
+        }
+
+        #decoded-text {
+            flex: 1;
+            padding: 1.5rem;
+            font-family: var(--font-mono);
+            font-size: 1.2rem;
+            line-height: 1.6;
+            overflow-y: auto;
+            word-wrap: break-word;
+            white-space: pre-wrap;
+            color: #e6edf3;
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        .output-actions {
+            padding: 0.5rem 1.5rem;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            justify-content: flex-end;
+            gap: 1rem;
+        }
+
+        #welcome-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(13, 17, 23, 0.95);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            transition: opacity 0.5s;
+        }
+
+        #welcome-overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .welcome-card {
+            background: #161b22;
+            border: 1px solid var(--border-color);
+            padding: 3rem;
+            border-radius: 12px;
+            text-align: center;
+            max-width: 500px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+        }
+
+        .welcome-card h1 {
+            font-size: 2.2rem;
+            margin-bottom: 1rem;
+            background: linear-gradient(90deg, #58a6ff, #00ffcc);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 800;
+        }
+
+        .welcome-card p {
+            margin-bottom: 2rem;
+            color: #8b949e;
+            line-height: 1.6;
+        }
+
+        @media (max-width: 900px) {
+            main {
+                grid-template-columns: 1fr;
+                grid-template-rows: auto 1fr 200px;
+            }
+            .controls { grid-row: 1; height: auto; }
+            .waterfall-panel { grid-column: 1; grid-row: 2; }
+            .output-panel { grid-column: 1; grid-row: 3; }
+        }
+    </style>
+</head>
+<body>
+
+<div id="welcome-overlay">
+    <div class="welcome-card">
+        <h1>CW-PRO DECODER</h1>
+        <p>A self-contained digital signal processor for Morse code. Targeted for WebSDR integration via system audio or virtual cable.</p>
+        <button id="start-btn">Initialize Audio Engine</button>
+    </div>
+</div>
+
+<header>
+    <div class="logo">CW-PRO <span style="font-weight: 300; opacity: 0.6;">v1.0</span></div>
+    <div class="status-container">
+        <div class="status-item">
+            <span class="indicator" id="sig-indicator"></span>
+            <span>SIGNAL</span>
+        </div>
+        <div class="status-item">
+            <span id="wpm-display">--</span> WPM
+        </div>
+        <div class="status-item">
+            <span id="freq-display-top">700</span> Hz
+        </div>
+    </div>
+</header>
+
+<main>
+    <aside class="controls">
+        <div class="control-group">
+            <label class="control-label">Center Frequency</label>
+            <div class="slider-row">
+                <input type="range" id="freq-slider" min="300" max="2500" value="700">
+                <span class="value-display" id="freq-val">700 Hz</span>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <label class="control-label">Bandwidth (Hz)</label>
+            <div class="slider-row">
+                <input type="range" id="bw-slider" min="10" max="300" value="60">
+                <span class="value-display" id="bw-val">60 Hz</span>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <label class="control-label">Signal Level & Threshold</label>
+            <div class="vu-container">
+                <div class="vu-threshold" id="vu-threshold-line" style="left: 30%;"></div>
+                <div class="vu-bar" id="vu-bar"></div>
+            </div>
+        </div>
+
+        <div class="control-group" style="flex-direction: row; gap: 0.5rem;">
+            <button id="autotune-btn" style="flex: 1; font-size: 0.7rem; padding: 0.5rem;">Auto-Tune</button>
+            <button id="test-tone-btn" class="secondary" style="flex: 1; font-size: 0.7rem; padding: 0.5rem;">Test Tone</button>
+        </div>
+
+        <button class="secondary" id="clear-btn" style="margin-top: auto;">Clear Log</button>
+    </aside>
+
+    <section class="waterfall-panel">
+        <canvas id="waterfall"></canvas>
+        <div class="center-marker"></div>
+        <div class="frequency-strip">
+            <span id="f-low">0 Hz</span>
+            <span id="f-center">-- Hz</span>
+            <span id="f-high">-- Hz</span>
+        </div>
+    </section>
+
+    <section class="output-panel">
+        <div id="decoded-text">Waiting for signal...</div>
+        <div class="output-actions">
+            <button class="secondary" id="copy-btn" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;">Copy Text</button>
+        </div>
+    </section>
+</main>
+
+<script>
+/**
+ * CW-PRO CORE LOGIC
+ */
+class MorseDecoder {
+    constructor() {
+        this.audioCtx = null;
+        this.analyser = null;
+        this.source = null;
+        this.filter = null;
+        
+        // Settings
+        this.centerFreq = 700;
+        this.bandwidth = 60;
+        this.threshold = 0.3;
+        this.gain = 20;
+        
+        // Buffers
+        this.fftSize = 8192;
+        this.dataArray = null;
+        
+        // Timing Logic
+        this.isToneActive = false;
+        this.lastStateChange = Date.now();
+        this.dotLength = 100; 
+        this.wpm = 0;
+        this.timingHistory = [];
+        
+        // Morse Table
+        this.morseMap = {
+            '.-': 'A', '-...': 'B', '-.-.': 'C', '-..': 'D', '.': 'E',
+            '..-.': 'F', '--.': 'G', '....': 'H', '..': 'I', '.---': 'J',
+            '-.-': 'K', '.-..': 'L', '--': 'M', '-.': 'N', '---': 'O',
+            '.--.': 'P', '--.-': 'Q', '.-.': 'R', '...': 'S', '-': 'T',
+            '..-': 'U', '...-': 'V', '.--': 'W', '-..-': 'X', '-.--': 'Y',
+            '--..': 'Z', '-----': '0', '.----': '1', '..---': '2', '...--': '3',
+            '....-': '4', '.....': '5', '-....': '6', '--...': '7', '---..': '8',
+            '----.': '9', '.-.-.-': '.', '--..--': ',', '---...': ':', '..--..': '?',
+            '.----.': "'", '-....-': '-', '-..-.': '/', '.-..-.': '"', '.--.-.': '@',
+            '-...-': '=', '.-.-.': '+', '...-.-': 'SK', '-.-.-': 'KN', '.-...': 'AS'
+        };
+        
+        this.currentSymbol = "";
+        this.decodedLog = "";
+        this.isInitialized = false;
+        this.oscillator = null;
+    }
+
+    async init() {
+        try {
+            this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const stream = await navigator.mediaDevices.getUserMedia({ 
+                audio: {
+                    echoCancellation: false,
+                    noiseSuppression: false,
+                    autoGainControl: false
+                } 
+            });
+            
+            this.source = this.audioCtx.createMediaStreamSource(stream);
+            
+            this.filter = this.audioCtx.createBiquadFilter();
+            this.filter.type = 'bandpass';
+            this.filter.frequency.value = this.centerFreq;
+            this.filter.Q.value = this.centerFreq / this.bandwidth;
+            
+            this.analyser = this.audioCtx.createAnalyser();
+            this.analyser.fftSize = this.fftSize;
+            this.analyser.smoothingTimeConstant = 0.5;
+            this.dataArray = new Uint8Array(this.analyser.frequencyBinCount);
+            
+            this.source.connect(this.filter);
+            this.filter.connect(this.analyser);
+            
+            this.isInitialized = true;
+            return true;
+        } catch (e) {
+            console.error("Audio init error:", e);
+            return false;
+        }
+    }
+
+    updateParams(freq, bw, thres, gain) {
+        this.centerFreq = freq;
+        this.bandwidth = bw;
+        this.threshold = thres / 100;
+        this.gain = gain;
+        
+        if (this.filter) {
+            this.filter.frequency.setTargetAtTime(this.centerFreq, this.audioCtx.currentTime, 0.05);
+            this.filter.Q.setTargetAtTime(this.centerFreq / this.bandwidth, this.audioCtx.currentTime, 0.05);
+        }
+    }
+
+    process() {
+        if (!this.isInitialized) return;
+        
+        this.analyser.getByteFrequencyData(this.dataArray);
+        
+        const nyquist = this.audioCtx.sampleRate / 2;
+        const binSize = nyquist / this.analyser.frequencyBinCount;
+        const targetBin = Math.round(this.centerFreq / binSize);
+        
+        let energy = 0;
+        const width = 3; // Wider bin sampling for stability
+        for (let i = -width; i <= width; i++) {
+            const idx = targetBin + i;
+            if (this.dataArray[idx]) {
+                // Weight the center bin more heavily
+                const weight = 1 - (Math.abs(i) / (width + 1));
+                energy += this.dataArray[idx] * weight;
+            }
+        }
+        energy = (energy / width) / 255;
+        energy *= (this.gain / 5); // Increased sensitivity
+
+        const now = Date.now();
+        const duration = now - this.lastStateChange;
+        
+        if (energy > this.threshold) {
+            if (!this.isToneActive) {
+                this.handleStateChange(false, duration);
+                this.isToneActive = true;
+                this.lastStateChange = now;
+            }
+        } else {
+            if (this.isToneActive) {
+                this.handleStateChange(true, duration);
+                this.isToneActive = false;
+                this.lastStateChange = now;
+            } else {
+                if (duration > this.dotLength * 3 && this.currentSymbol !== "") {
+                    this.decodeSymbol();
+                }
+                if (duration > this.dotLength * 7 && this.decodedLog.slice(-1) !== " " && this.decodedLog !== "" && this.decodedLog !== "Waiting for signal...") {
+                    if (this.decodedLog.slice(-1) !== "\n") this.appendChar(" ");
+                }
+            }
+        }
+        
+        return { energy, isToneActive: this.isToneActive };
+    }
+
+    handleStateChange(wasOn, duration) {
+        if (duration < 25) return; 
+
+        if (wasOn) {
+            if (duration < this.dotLength * 2) {
+                this.currentSymbol += ".";
+            } else {
+                this.currentSymbol += "-";
+            }
+            this.updateDotLength(duration / (this.currentSymbol.slice(-1) === "." ? 1 : 3));
+        }
+    }
+
+    updateDotLength(newVal) {
+        if (newVal < 30 || newVal > 500) return;
+        this.timingHistory.push(newVal);
+        if (this.timingHistory.length > 15) this.timingHistory.shift();
+        this.dotLength = this.timingHistory.reduce((a, b) => a + b) / this.timingHistory.length;
+        this.wpm = Math.round(1200 / this.dotLength);
+    }
+
+    decodeSymbol() {
+        const char = this.morseMap[this.currentSymbol] || "";
+        if (char) this.appendChar(char);
+        this.currentSymbol = "";
+    }
+
+    appendChar(char) {
+        if (this.decodedLog === "Waiting for signal...") this.decodedLog = "";
+        this.decodedLog += char;
+        const el = document.getElementById('decoded-text');
+        el.innerText = this.decodedLog;
+        el.scrollTop = el.scrollHeight;
+    }
+
+    autoTune() {
+        if (!this.isInitialized) return;
+        const nyquist = this.audioCtx.sampleRate / 2;
+        const binSize = nyquist / this.analyser.frequencyBinCount;
+        const searchRange = 200; // Hz
+        const startBin = Math.max(0, Math.round((this.centerFreq - searchRange) / binSize));
+        const endBin = Math.min(this.dataArray.length - 1, Math.round((this.centerFreq + searchRange) / binSize));
+        
+        let maxVal = 0;
+        let maxBin = -1;
+        for (let i = startBin; i <= endBin; i++) {
+            if (this.dataArray[i] > maxVal) {
+                maxVal = this.dataArray[i];
+                maxBin = i;
+            }
+        }
+        
+        if (maxBin !== -1 && maxVal > 50) {
+            const newFreq = Math.round(maxBin * binSize);
+            this.updateParams(newFreq, this.bandwidth, this.threshold * 100, this.gain);
+            return newFreq;
+        }
+        return null;
+    }
+
+    playTestTone() {
+        if (!this.isInitialized) return;
+        if (this.oscillator) {
+            this.oscillator.stop();
+            this.oscillator = null;
+            return;
+        }
+        
+        this.oscillator = this.audioCtx.createOscillator();
+        this.oscillator.type = 'sine';
+        this.oscillator.frequency.value = this.centerFreq;
+        
+        const g = this.audioCtx.createGain();
+        g.gain.setValueAtTime(0, this.audioCtx.currentTime);
+        
+        // Sequence 'CQ' in Morse
+        const t = this.audioCtx.currentTime + 0.5;
+        const dot = 0.1;
+        const dash = 0.3;
+        
+        const play = (start, dur) => {
+            g.gain.setValueAtTime(0.5, start);
+            g.gain.setValueAtTime(0, start + dur);
+            return start + dur + dot;
+        };
+        
+        let next = t;
+        // C: -.-.
+        next = play(next, dash); next = play(next + dot, dot); next = play(next + dot, dash); next = play(next + dot, dot);
+        next += dash; // space
+        // Q: --.-
+        next = play(next, dash); next = play(next + dot, dash); next = play(next + dot, dot); next = play(next + dot, dash);
+        
+        this.oscillator.connect(g);
+        g.connect(this.audioCtx.destination);
+        // Also connect to filter so the decoder sees it
+        g.connect(this.filter);
+        
+        this.oscillator.start();
+        setTimeout(() => { if (this.oscillator) try { this.oscillator.stop(); this.oscillator = null; } catch(e){} }, 4000);
+    }
+}
+
+const decoder = new MorseDecoder();
+const canvas = document.getElementById('waterfall');
+const ctx = canvas.getContext('2d');
+let offCanvas, offCtx;
+
+const state = {
+    freq: 700, bw: 60, sq: 30, gain: 20, colorMode: 'classic'
+};
+
+function initCanvas() {
+    canvas.width = canvas.offsetWidth;
+    canvas.height = canvas.offsetHeight;
+    offCanvas = document.createElement('canvas');
+    offCanvas.width = canvas.width;
+    offCanvas.height = canvas.height;
+    offCtx = offCanvas.getContext('2d');
+    offCtx.fillStyle = '#000';
+    offCtx.fillRect(0, 0, canvas.width, canvas.height);
+}
+
+const palettes = {
+    classic: (v) => `rgb(0, ${v}, ${v * 0.7})`,
+    magma: (v) => `rgb(${v}, ${v * 0.4}, ${v * 0.1})`,
+    ocean: (v) => `rgb(${v * 0.1}, ${v * 0.5}, ${v})`,
+    grayscale: (v) => `rgb(${v}, ${v}, ${v})`
+};
+
+function draw() {
+    requestAnimationFrame(draw);
+    if (!decoder.isInitialized) return;
+
+    const { energy, isToneActive } = decoder.process();
+    document.getElementById('sig-indicator').className = isToneActive ? 'indicator active' : 'indicator';
+    document.getElementById('wpm-display').innerText = decoder.wpm || '--';
+    
+    // Update VU Meter
+    const vuBar = document.getElementById('vu-bar');
+    vuBar.style.width = Math.min(100, energy * 100) + '%';
+    
+    offCtx.drawImage(offCanvas, 0, 0, canvas.width, canvas.height - 2, 0, 2, canvas.width, canvas.height - 2);
+    
+    const fftData = decoder.dataArray;
+    const viewPortFactor = 6;
+    const sliceWidth = canvas.width / (fftData.length / viewPortFactor);
+    
+    for (let i = 0; i < fftData.length / viewPortFactor; i++) {
+        let val = fftData[i];
+        offCtx.fillStyle = palettes[state.colorMode](val);
+        offCtx.fillRect(i * sliceWidth, 0, sliceWidth + 1, 2);
+    }
+    
+    ctx.drawImage(offCanvas, 0, 0);
+
+    const nyquist = decoder.audioCtx.sampleRate / 2;
+    const viewLimit = nyquist / viewPortFactor;
+    document.getElementById('f-center').innerText = Math.round(viewLimit / 2) + " Hz";
+    document.getElementById('f-high').innerText = Math.round(viewLimit) + " Hz";
+
+    const marker = document.querySelector('.center-marker');
+    const xPos = (decoder.centerFreq / viewLimit) * 100;
+    marker.style.left = `${xPos}%`;
+}
+
+document.getElementById('start-btn').onclick = async () => {
+    if (await decoder.init()) {
+        document.getElementById('welcome-overlay').classList.add('hidden');
+        initCanvas();
+        draw();
+    }
+};
+
+const bind = (id, key, unit) => {
+    const s = document.getElementById(id);
+    const v = document.getElementById(id.replace('slider', 'val'));
+    s.oninput = () => {
+        state[key] = parseInt(s.value);
+        v.innerText = `${state[key]}${unit}`;
+        if (key === 'freq') document.getElementById('freq-display-top').innerText = state[key];
+        decoder.updateParams(state.freq, state.bw, state.sq, state.gain);
+    };
+};
+
+bind('freq-slider', 'freq', ' Hz');
+bind('bw-slider', 'bw', ' Hz');
+document.getElementById('sq-slider').oninput = (e) => {
+    state.sq = parseInt(e.target.value);
+    document.getElementById('sq-val').innerText = state.sq + "%";
+    document.getElementById('vu-threshold-line').style.left = state.sq + "%";
+    decoder.updateParams(state.freq, state.bw, state.sq, state.gain);
+};
+
+document.getElementById('gain-slider').oninput = (e) => {
+    state.gain = parseInt(e.target.value);
+    document.getElementById('gain-val').innerText = (state.gain/10).toFixed(1) + "x";
+    decoder.updateParams(state.freq, state.bw, state.sq, state.gain);
+};
+
+document.getElementById('autotune-btn').onclick = () => {
+    const newF = decoder.autoTune();
+    if (newF) {
+        document.getElementById('freq-slider').value = newF;
+        document.getElementById('freq-val').innerText = newF + " Hz";
+        document.getElementById('freq-display-top').innerText = newF;
+        state.freq = newF;
+    }
+};
+
+document.getElementById('test-tone-btn').onclick = () => {
+    decoder.playTestTone();
+};
+
+document.getElementById('waterfall').onclick = (e) => {
+    const r = e.target.getBoundingClientRect();
+    const x = e.clientX - r.left;
+    const viewLimit = (decoder.audioCtx.sampleRate / 2) / 6;
+    const nf = (x / r.width) * viewLimit;
+    document.getElementById('freq-slider').value = Math.round(nf);
+    state.freq = Math.round(nf);
+    document.getElementById('freq-val').innerText = state.freq + " Hz";
+    document.getElementById('freq-display-top').innerText = state.freq;
+    decoder.updateParams(state.freq, state.bw, state.sq, state.gain);
+};
+
+window.onresize = initCanvas;
+</script>
+</body>
+</html>

@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<!-- 
+     SPOTTER-PRO // POTA & SOTA Console
+     Initial design and implementation: WB2SEF
+     Project development: mdrapkin & Antigravity (AI Assistant)
+     For the Arizona Repeater Association (W7ARA)
+-->
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>W7ARA's SPOTTER-PRO // POTA & SOTA Console</title>
+    <link rel="icon" href="https://w7ara.org/favicon.ico" type="image/x-icon">
+    <style>
+        :root {
+            --bg-color: #0b0e14;
+            --panel-bg: rgba(23, 28, 36, 0.85);
+            --border-color: #2d333b;
+            --accent-pota: #2ea043;
+            --accent-sota: #006DAA; /* W7ARA Blue */
+            --accent-brand: #006DAA;
+            --text-main: #adbac7;
+            --text-bright: #cdd9e5;
+            --font-main: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: var(--font-main);
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* --- Header --- */
+        header {
+            padding: 1rem 2rem;
+            background: rgba(11, 14, 20, 0.95);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            backdrop-filter: blur(12px);
+            z-index: 100;
+        }
+
+        .logo {
+            font-size: 1.1rem;
+            font-weight: 800;
+            letter-spacing: 1px;
+            color: var(--text-bright);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .logo img {
+            height: 40px;
+            width: auto;
+            border-radius: 4px;
+        }
+
+        .logo span { color: var(--accent-sota); }
+
+        .stats {
+            display: flex;
+            gap: 2rem;
+            font-size: 0.85rem;
+            font-family: var(--font-mono);
+        }
+
+        .stat-item b { color: var(--text-bright); }
+
+        /* --- Main Layout --- */
+        main {
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* --- Sidebar: Settings & Filters --- */
+        .sidebar {
+            background: var(--panel-bg);
+            border-right: 1px solid var(--border-color);
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            overflow-y: auto;
+        }
+
+        .section-title {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #768390;
+            margin-bottom: 0.8rem;
+            font-weight: 700;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        label { display: block; font-size: 0.85rem; margin-bottom: 0.4rem; color: var(--text-bright); }
+
+        input, select {
+            width: 100%;
+            background: #1c2128;
+            border: 1px solid var(--border-color);
+            padding: 0.6rem;
+            border-radius: 6px;
+            color: var(--text-bright);
+            font-family: var(--font-mono);
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+        }
+
+        input:focus { border-color: var(--accent-sota); outline: none; }
+
+        .filter-toggle {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .toggle-btn {
+            flex: 1;
+            padding: 0.5rem;
+            border: 1px solid var(--border-color);
+            background: transparent;
+            color: var(--text-main);
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.75rem;
+            font-weight: 600;
+            transition: 0.2s;
+        }
+
+        .toggle-btn.active.pota { background: var(--accent-pota); color: white; border-color: var(--accent-pota); }
+        .toggle-btn.active.sota { background: var(--accent-sota); color: white; border-color: var(--accent-sota); }
+
+        /* --- Main Content: Spot List --- */
+        .content {
+            padding: 1rem 2rem;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .spot-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+            gap: 1rem;
+        }
+
+        .spot-card {
+            background: rgba(28, 33, 40, 0.6);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1rem;
+            display: grid;
+            grid-template-columns: 80px 1fr 100px;
+            align-items: center;
+            gap: 1rem;
+            transition: 0.2s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .spot-card:hover { border-color: #444c56; transform: translateY(-2px); background: rgba(34, 39, 46, 0.8); }
+
+        .spot-card.new::before {
+            content: '';
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            width: 8px;
+            height: 8px;
+            background: var(--accent-sota);
+            border-radius: 50%;
+            box-shadow: 0 0 10px var(--accent-sota);
+        }
+
+        .spot-source {
+            font-size: 0.65rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            padding: 2px 6px;
+            border-radius: 4px;
+            text-align: center;
+        }
+
+        .source-pota { background: rgba(46, 160, 67, 0.15); color: #3fb950; border: 1px solid #3fb95044; }
+        .source-sota { background: rgba(247, 129, 102, 0.15); color: #f78166; border: 1px solid #f7816644; }
+
+        .spot-main { display: flex; flex-direction: column; gap: 4px; }
+
+        .activator { font-family: var(--font-mono); font-size: 1.25rem; font-weight: 700; color: var(--text-bright); }
+
+        .location { font-size: 0.85rem; color: var(--text-main); opacity: 0.8; }
+
+        .freq-info { text-align: right; }
+
+        .frequency { font-family: var(--font-mono); font-size: 1.1rem; font-weight: 700; color: var(--accent-sota); }
+
+        .mode { font-size: 0.75rem; text-transform: uppercase; color: #768390; }
+
+        .metadata {
+            grid-column: 1 / 4;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 0.8rem;
+            margin-top: 0.8rem;
+            border-top: 1px solid rgba(68, 76, 86, 0.3);
+            font-size: 0.75rem;
+        }
+
+        .distance-tag { color: #539bf5; font-weight: 600; display: flex; align-items: center; gap: 4px; }
+
+        .time-tag { color: #768390; }
+
+        /* --- Buttons --- */
+        button.action {
+            background: var(--accent-sota);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.2s;
+            font-size: 0.75rem;
+        }
+
+        button.action:hover { opacity: 0.9; }
+
+        /* --- Glass Container --- */
+        #loader {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            z-index: 10;
+        }
+
+        .pulse {
+            width: 40px;
+            height: 40px;
+            background: var(--accent-sota);
+            border-radius: 50%;
+            margin: 0 auto 1rem;
+            animation: pulse-anim 1.5s infinite ease-in-out;
+        }
+
+        @keyframes pulse-anim {
+            0% { transform: scale(0.8); opacity: 0.5; }
+            50% { transform: scale(1.1); opacity: 1; }
+            100% { transform: scale(0.8); opacity: 0.5; }
+        }
+
+        /* --- Copy Feedback --- */
+        .copy-status {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: var(--accent-pota);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            transform: translateY(100px);
+            transition: 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+            z-index: 1000;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+        .copy-status.visible { transform: translateY(0); }
+
+        .loader-dot { width: 8px; height: 8px; background: var(--accent-pota); border-radius: 50%; display: inline-block; margin-right: 8px; box-shadow: 0 0 10px var(--accent-pota); }
+        #scanning-indicator { display: flex; align-items: center; font-size: 0.75rem; font-weight: 700; color: var(--text-muted); opacity: 0; transition: opacity 0.3s; margin-left: 1.5rem; padding-left: 1.5rem; border-left: 1px solid var(--border-color); }
+        #scanning-indicator.active { opacity: 1; }
+        #scanning-indicator.active .loader-dot { animation: pulse-dot 1.5s infinite; }
+        @keyframes pulse-dot { 0% { transform: scale(0.8); opacity: 0.5; } 50% { transform: scale(1.2); opacity: 1; } 100% { transform: scale(0.8); opacity: 0.5; } }
+        .gps-btn { background: #1c2128; border: 1px solid var(--border-color); color: var(--text-main); padding: 4px 8px; border-radius: 4px; font-size: 0.65rem; cursor: pointer; float: right; transition: 0.2s; }
+        .gps-btn:hover { border-color: var(--accent-sota); color: var(--accent-sota); }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="logo">
+        <img src="https://w7ara.org/Master/ara200.gif" alt="Arizona Repeater Association Logo">
+        <div>W7ARA's <span>SPOTTER-PRO</span></div>
+    </div>
+    
+    <div id="scanning-indicator">
+        <div class="loader-dot"></div>
+        <span>SCANNING THE AIRWAVES...</span>
+    </div>
+
+    <div class="stats">
+        <div class="stat-item">POTA SPOTS: <b id="pota-count">0</b></div>
+        <div class="stat-item">SOTA SPOTS: <b id="sota-count">0</b></div>
+        <div class="stat-item">UPDATED: <b id="last-update">--:--</b></div>
+        <div class="stat-item">NEXT SCAN: <b id="next-update">60s</b></div>
+    </div>
+</header>
+
+<main>
+    <aside class="sidebar">
+        <div class="section-title">Station Configuration</div>
+        <label>Callsign</label>
+        <input type="text" id="callsign" placeholder="K1ABC" value="">
+        
+        <label>Grid Square (4/6 characters) <button class="gps-btn" onclick="useGPS()">🧭 FIND ME</button></label>
+        <input type="text" id="grid" placeholder="FN31" value="">
+
+        <div class="section-title">Sources</div>
+        <div class="filter-toggle">
+            <button class="toggle-btn active pota" id="pota-toggle">POTA</button>
+            <button class="toggle-btn active sota" id="sota-toggle">SOTA</button>
+        </div>
+
+        <div class="section-title">Filters</div>
+        <label>Activator (Callsign Filter)</label>
+        <input type="text" id="callsign-filter" placeholder="e.g. K1ABC" style="text-transform: uppercase;">
+
+        <label>Max Distance (mi)</label>
+        <input type="number" id="dist-limit" value="5000">
+
+        <label>Band</label>
+        <select id="band-filter">
+            <option value="all">All Bands</option>
+            <option value="80m">80m</option>
+            <option value="40m">40m</option>
+            <option value="30m">30m</option>
+            <option value="20m">20m</option>
+            <option value="17m">17m</option>
+            <option value="15m">15m</option>
+            <option value="12m">12m</option>
+            <option value="10m">10m</option>
+            <option value="6m">6m</option>
+            <option value="2m">2m</option>
+            <option value="70cm">70cm</option>
+        </select>
+
+        <label>Mode</label>
+        <select id="mode-filter">
+            <option value="all">All Modes</option>
+            <option value="SSB">SSB / Phone</option>
+            <option value="CW">CW</option>
+            <option value="DIGITAL">Digital (FT8/JS8)</option>
+        </select>
+
+        <div class="section-title">Alerts</div>
+        <div style="display: flex; align-items: center; gap: 8px; font-size: 0.8rem;">
+            <input type="checkbox" id="audio-alerts" style="width: auto; margin: 0;"> Audio Notifications
+        </div>
+
+        <button class="action" id="refresh-btn" style="width: 100%; margin-top: 2rem;">Fetch New Spots</button>
+    </aside>
+
+    <section class="content">
+        <div class="spot-grid" id="spot-container">
+            <!-- Spots will be injected here -->
+        </div>
+        <div id="copy-status" class="copy-status">Copied to Clipboard!</div>
+    </section>
+</main>
+
+<script>
+/**
+ * SPOTTER-PRO CORE LOGIC
+ */
+
+const state = {
+    myCoords: null,
+    potaEnabled: true,
+    sotaEnabled: true,
+    filters: {
+        dist: 5000,
+        band: 'all',
+        mode: 'all',
+        callsign: ''
+    },
+    knownSpots: new Set(),
+    nextScan: 60
+};
+
+// --- Maidenhead Converter ---
+function gridToCoords(grid) {
+    if (!grid || grid.length < 4) return null;
+    grid = grid.toUpperCase();
+    
+    let lon = (grid.charCodeAt(0) - 65) * 20 - 180;
+    let lat = (grid.charCodeAt(1) - 65) * 10 - 90;
+    lon += (grid.charCodeAt(2) - 48) * 2;
+    lat += (grid.charCodeAt(3) - 48) * 1;
+    
+    if (grid.length >= 6) {
+        lon += (grid.charCodeAt(4) - 65) * (2/24) + (1/24);
+        lat += (grid.charCodeAt(5) - 65) * (1/24) + (0.5/24);
+    } else {
+        lon += 1; 
+        lat += 0.5;
+    }
+    return { lat, lon };
+}
+
+// --- Grid Scraper from Comments ---
+function extractGrid(text) {
+    if (!text) return null;
+    // Look for 4/6 char grid patterns e.g. "FN31", "IO91ab", etc.
+    const re = /\b([A-R]{2}[0-9]{2}([A-X]{2})?)\b/i;
+    const match = text.match(re);
+    return match ? match[1].toUpperCase() : null;
+}
+
+// --- Haversine Distance ---
+function calculateDistance(c1, c2) {
+    if (!c1 || !c2) return null;
+    const R = 3958.8; // Miles
+    const dLat = (c2.lat - c1.lat) * Math.PI / 180;
+    const dLon = (c2.lon - c1.lon) * Math.PI / 180;
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+              Math.cos(c1.lat * Math.PI / 180) * Math.cos(c2.lat * Math.PI / 180) * 
+              Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return Math.round(R * c);
+}
+
+function calculateBearing(c1, c2) {
+    if (!c1 || !c2) return null;
+    const l1 = c1.lat * Math.PI / 180;
+    const l2 = c2.lat * Math.PI / 180;
+    const dl = (c2.lon - c1.lon) * Math.PI / 180;
+    const y = Math.sin(dl) * Math.cos(l2);
+    const x = Math.cos(l1) * Math.sin(l2) - Math.sin(l1) * Math.cos(l2) * Math.cos(dl);
+    return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+}
+
+// --- GPS to Maidenhead ---
+function coordsToGrid(lat, lon) {
+    lon += 180;
+    lat += 90;
+    
+    const f1 = String.fromCharCode(65 + Math.floor(lon / 20));
+    const f2 = String.fromCharCode(65 + Math.floor(lat / 10));
+    const s1 = Math.floor((lon % 20) / 2);
+    const s2 = Math.floor(lat % 10);
+    const t1 = String.fromCharCode(97 + Math.floor((lon % 2) * 12));
+    const t2 = String.fromCharCode(97 + Math.floor((lat % 1) * 24));
+    
+    return `${f1}${f2}${s1}${s2}${t1}${t2}`;
+}
+
+// --- Freq to Band Helper ---
+function freqToBand(val) {
+    let f = parseFloat(val);
+    if (isNaN(f)) return "";
+    if (f < 1000) f = f * 1000; // Convert MHz to kHz if needed
+    
+    if (f >= 1800 && f <= 2000) return "160m";
+    if (f >= 3500 && f <= 4000) return "80m";
+    if (f >= 5330 && f <= 5410) return "60m";
+    if (f >= 7000 && f <= 7300) return "40m";
+    if (f >= 10100 && f <= 10150) return "30m";
+    if (f >= 14000 && f <= 14350) return "20m";
+    if (f >= 18068 && f <= 18168) return "17m";
+    if (f >= 21000 && f <= 21450) return "15m";
+    if (f >= 24890 && f <= 24990) return "12m";
+    if (f >= 28000 && f <= 29700) return "10m";
+    if (f >= 50000 && f <= 54000) return "6m";
+    if (f >= 144000 && f <= 148000) return "2m";
+    if (f >= 420000 && f <= 450000) return "70cm";
+    return "";
+}
+
+function normalizeBand(b) {
+    if (!b) return "";
+    b = b.toString().toLowerCase().trim();
+    if (!b.endsWith('m') && !b.endsWith('cm')) b += 'm';
+    return b;
+}
+
+// --- Morse Audio Engine ---
+let audioCtx = null;
+
+function initAudio() {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+}
+
+function playMorse(pattern) {
+    if (!audioCtx || !document.getElementById('audio-alerts').checked) return;
+    initAudio();
+    
+    const now = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(700, now);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    
+    let time = now;
+    const dit = 0.08;
+    const dah = dit * 3;
+    
+    pattern.split('').forEach(char => {
+        const dur = (char === '.') ? dit : dah;
+        gain.gain.setValueAtTime(0.15, time);
+        gain.gain.setValueAtTime(0, time + dur);
+        time += dur + dit;
+    });
+    
+    osc.start(now);
+    osc.stop(time);
+}
+
+function useGPS() {
+    if (!navigator.geolocation) return alert("Geolocation not supported");
+    navigator.geolocation.getCurrentPosition(pos => {
+        const grid = coordsToGrid(pos.coords.latitude, pos.coords.longitude);
+        document.getElementById('grid').value = grid;
+        updateConfig();
+        fetchSpots();
+    });
+}
+
+// --- State/Province centers for approx POTA distance ---
+const regionCenters = {
+    'US-AL': {lat: 32.31, lon: -86.90}, 'US-AK': {lat: 63.58, lon: -154.49}, 'US-AZ': {lat: 34.04, lon: -111.09},
+    'US-AR': {lat: 34.55, lon: -92.28}, 'US-CA': {lat: 36.77, lon: -119.41}, 'US-CO': {lat: 39.55, lon: -105.78},
+    'US-CT': {lat: 41.60, lon: -73.08}, 'US-DE': {lat: 38.91, lon: -75.52}, 'US-FL': {lat: 27.66, lon: -81.51},
+    'US-GA': {lat: 32.16, lon: -82.90}, 'US-HI': {lat: 19.89, lon: -155.58}, 'US-ID': {lat: 44.06, lon: -114.74},
+    'US-IL': {lat: 40.63, lon: -89.39}, 'US-IN': {lat: 40.26, lon: -86.12}, 'US-IA': {lat: 41.87, lon: -93.09},
+    'US-KS': {lat: 38.52, lon: -96.72}, 'US-KY': {lat: 37.83, lon: -84.27}, 'US-LA': {lat: 31.24, lon: -92.14},
+    'US-ME': {lat: 45.25, lon: -69.44}, 'US-MD': {lat: 39.04, lon: -76.64}, 'US-MA': {lat: 42.40, lon: -71.38},
+    'US-MI': {lat: 44.31, lon: -85.60}, 'US-MN': {lat: 46.72, lon: -94.68}, 'US-MS': {lat: 32.35, lon: -89.39},
+    'US-MO': {lat: 37.96, lon: -91.83}, 'US-MT': {lat: 46.87, lon: -110.36}, 'US-NE': {lat: 41.49, lon: -99.90},
+    'US-NV': {lat: 38.80, lon: -116.41}, 'US-NH': {lat: 43.19, lon: -71.57}, 'US-NJ': {lat: 40.05, lon: -74.40},
+    'US-NM': {lat: 34.51, lon: -105.87}, 'US-NY': {lat: 43.29, lon: -74.21}, 'US-NC': {lat: 35.75, lon: -79.01},
+    'US-ND': {lat: 47.55, lon: -101.00}, 'US-OH': {lat: 40.41, lon: -82.90}, 'US-OK': {lat: 35.00, lon: -98.00},
+    'US-OR': {lat: 43.80, lon: -120.55}, 'US-PA': {lat: 41.20, lon: -77.19}, 'US-RI': {lat: 41.58, lon: -71.47},
+    'US-SC': {lat: 33.83, lon: -81.16}, 'US-SD': {lat: 44.36, lon: -100.35}, 'US-TN': {lat: 35.51, lon: -86.58},
+    'US-TX': {lat: 31.96, lon: -99.90}, 'US-UT': {lat: 39.32, lon: -111.09}, 'US-VT': {lat: 44.55, lon: -72.57},
+    'US-VA': {lat: 37.43, lon: -78.65}, 'US-WA': {lat: 47.75, lon: -120.74}, 'US-WV': {lat: 38.59, lon: -80.45},
+    'US-WI': {lat: 43.78, lon: -88.78}, 'US-WY': {lat: 43.07, lon: -107.29},
+    // Canadian Provinces
+    'CA-AB': {lat: 53.93, lon: -116.57}, 'CA-BC': {lat: 53.72, lon: -127.64}, 'CA-ON': {lat: 51.25, lon: -85.32},
+    'CA-QC': {lat: 52.93, lon: -73.54}, 'CA-NS': {lat: 44.68, lon: -63.74},
+    // International
+    'VK': {lat: -25.27, lon: 133.77}, 'ZL': {lat: -40.90, lon: 174.88}, 'G': {lat: 55.37, lon: -3.43},
+    'DL': {lat: 51.16, lon: 10.45}, 'F': {lat: 46.22, lon: 2.21}, 'I': {lat: 41.87, lon: 12.56},
+    'EA': {lat: 40.46, lon: -3.74}, 'VE': {lat: 56.13, lon: -106.34}, 'JA': {lat: 36.20, lon: 138.25}
+};
+
+const stateAlias = {
+    'arkansas': 'US-AR', 'idaho': 'US-ID', 'texas': 'US-TX', 'california': 'US-CA',
+    'oklahoma': 'US-OK', 'florida': 'US-FL', 'ontario': 'CA-ON', 'quebec': 'CA-QC', 'alaska': 'US-AK'
+};
+
+// --- API FETCH ---
+async function fetchSpots() {
+    const indicator = document.getElementById('scanning-indicator');
+    if (indicator) indicator.classList.add('active');
+
+    let allSpots = [];
+    try {
+        if (state.potaEnabled) {
+            const response = await fetch('https://api.pota.app/spot/');
+            const data = await response.json();
+            data.forEach(s => {
+                const scrapedGrid = extractGrid(s.comments);
+                let coords = scrapedGrid ? gridToCoords(scrapedGrid) : null;
+                
+                if (!coords && s.locationDesc) {
+                    const cleanDesc = s.locationDesc.trim();
+                    coords = regionCenters[cleanDesc] || regionCenters[stateAlias[cleanDesc.toLowerCase()]];
+                }
+                
+                allSpots.push({
+                    id: `pota-${s.spotId}`,
+                    source: 'pota', activator: s.activator, ref: s.reference, locationName: s.name,
+                    freq: s.frequency, band: normalizeBand(s.band || freqToBand(s.frequency)),
+                    mode: s.mode, time: s.spotTime.replace(' ', 'T'),
+                    lat: coords ? coords.lat : null, lon: coords ? coords.lon : null,
+                    comments: s.comments
+                });
+            });
+        }
+
+        // 2. Fetch SOTA
+        if (state.sotaEnabled) {
+            const response = await fetch('https://api2.sota.org.uk/api/spots/20');
+            const data = await response.json();
+            data.forEach(s => {
+                const scrapedGrid = extractGrid(s.comments);
+                const coords = scrapedGrid ? gridToCoords(scrapedGrid) : null;
+                allSpots.push({
+                    id: `sota-${s.id}`,
+                    source: 'sota', activator: s.activatorCallsign,
+                    ref: s.associationCode + '/' + s.summitCode, locationName: s.summitName,
+                    freq: s.frequency, band: normalizeBand(freqToBand(s.frequency)),
+                    mode: s.mode, time: s.timeStamp.replace(' ', 'T'),
+                    lat: coords ? coords.lat : null, lon: coords ? coords.lon : null,
+                    comments: s.comments
+                });
+            });
+        }
+        window.currentSpots = allSpots;
+        renderSpots(allSpots);
+    } catch (err) {
+        console.error("Fetch failed", err);
+    } finally {
+        if (indicator) indicator.classList.remove('active');
+        document.getElementById('last-update').innerText = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        state.nextScan = 60; 
+    }
+}
+
+function renderSpots(spots) {
+    const container = document.getElementById('spot-container');
+    const potaLabel = document.getElementById('pota-count');
+    const sotaLabel = document.getElementById('sota-count');
+    
+    // Sort by UTC time
+    spots.sort((a, b) => Date.parse(b.time) - Date.parse(a.time));
+
+    // Calculate Distance
+    spots.forEach(s => {
+        if (s.lat && s.lon && state.myCoords) {
+            s.distance = calculateDistance(state.myCoords, { lat: s.lat, lon: s.lon });
+            s.bearing = calculateBearing(state.myCoords, { lat: s.lat, lon: s.lon });
+        }
+    });
+
+    // Apply Filters
+    const filtered = spots.filter(s => {
+        // Distance filter
+        if (s.distance && s.distance > state.filters.dist) return false;
+        
+        // Band filter
+        if (state.filters.band !== 'all' && s.band !== state.filters.band) return false;
+
+        // Callsign filter
+        if (state.filters.callsign) {
+            const target = state.filters.callsign.toUpperCase().trim();
+            if (s.activator.toUpperCase().indexOf(target) === -1) return false;
+        }
+
+        // Mode filter
+        if (state.filters.mode !== 'all' && s.mode !== state.filters.mode) {
+            // Loose matching for modes
+            if (state.filters.mode === 'DIGITAL' && !['FT8','JS8'].includes(s.mode)) return false;
+            if (state.filters.mode === 'SSB' && s.mode !== 'SSB' && s.mode !== 'USB' && s.mode !== 'LSB') return false;
+            if (state.filters.mode === 'CW' && s.mode !== 'CW') return false;
+        }
+        return true;
+    });
+
+    container.innerHTML = '';
+    let pCount = 0, sCount = 0;
+
+    filtered.forEach(s => {
+        if (s.source === 'pota') pCount++; else sCount++;
+        
+        const card = document.createElement('div');
+        const isNew = !state.knownSpots.has(s.id);
+        
+        if (isNew) {
+            state.knownSpots.add(s.id);
+            // Only play alert if not initial load
+            if (state.initialized) {
+                const morse = s.source === 'pota' ? ".--." : "..."; // P or S
+                playMorse(morse);
+            }
+        }
+
+        card.className = `spot-card ${isNew ? 'new' : ''}`;
+        
+        const distText = s.distance ? `${s.distance} mi • ${Math.round(s.bearing)}°` : '-- mi';
+        const now = new Date().getTime();
+        const spotDate = Date.parse(s.time.endsWith('Z') ? s.time : s.time + 'Z');
+        const timeDiff = Math.max(0, Math.floor((now - spotDate) / 60000));
+        const timeText = timeDiff <= 0 ? 'Just now' : `${timeDiff}m ago`;
+
+        card.innerHTML = `
+            <div class="spot-source source-${s.source}">${s.source}</div>
+            <div class="spot-main">
+                <div class="activator">${s.activator}</div>
+                <div class="location">${s.ref} - ${s.locationName || ''}</div>
+                ${s.comments ? `<div style="font-size: 0.7rem; color: #768390; margin-top: 4px;">"${s.comments}"</div>` : ''}
+            </div>
+            <div class="freq-info">
+                <div class="frequency">${s.freq}</div>
+                <div class="mode">${s.mode}</div>
+            </div>
+            <div class="metadata">
+                <div class="distance-tag" style="${s.distance ? '' : 'opacity:0.3'}">📍 ${distText}</div>
+                <div class="time-tag">🕒 ${timeText}</div>
+                <div style="display:flex; gap: 8px;">
+                    ${s.lat ? `<button class="action" style="background:#1c2128; border:1px solid #444c56;" onclick="window.open('https://www.google.com/maps/search/?api=1&query=${s.lat},${s.lon}', '_blank')">🗺️ MAP</button>` : ''}
+                    <button class="action" onclick="copyValue('${s.freq}')">📋 COPY FREQ</button>
+                </div>
+            </div>
+        `;
+        container.appendChild(card);
+    });
+
+    potaLabel.innerText = pCount;
+    sotaLabel.innerText = sCount;
+}
+
+// --- UI Interaction ---
+function updateConfig() {
+    const grid = document.getElementById('grid').value;
+    const call = document.getElementById('callsign').value;
+    const watch = document.getElementById('callsign-filter').value;
+    state.myCoords = gridToCoords(grid);
+    state.filters.callsign = watch;
+    localStorage.setItem('grid', grid);
+    localStorage.setItem('callsign', call);
+    localStorage.setItem('watch_call', watch);
+}
+
+// --- Initialization ---
+function initConfig() {
+    const savedGrid = localStorage.getItem('grid') || 'FN31pr';
+    const savedCall = localStorage.getItem('callsign') || 'K1ABC';
+    const savedWatch = localStorage.getItem('watch_call') || '';
+    document.getElementById('grid').value = savedGrid;
+    document.getElementById('callsign').value = savedCall;
+    document.getElementById('callsign-filter').value = savedWatch;
+    state.myCoords = gridToCoords(savedGrid);
+    state.filters.callsign = savedWatch;
+    
+    // Initial fetch to populate known set without beeping
+    state.initialized = false;
+    fetchSpots().then(() => {
+        state.initialized = true;
+    });
+}
+
+// --- Copy Workaround (Legacy Support) ---
+function copyValue(val) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(val);
+    } else {
+        const temp = document.createElement('textarea');
+        temp.value = val;
+        document.body.appendChild(temp);
+        temp.select();
+        document.execCommand('copy');
+        document.body.removeChild(temp);
+    }
+    
+    // Feedback
+    const status = document.getElementById('copy-status');
+    status.innerText = `${val} MHz Copied!`;
+    status.classList.add('visible');
+    setTimeout(() => status.classList.remove('visible'), 2000);
+}
+
+document.getElementById('refresh-btn').onclick = fetchSpots;
+
+document.getElementById('pota-toggle').onclick = (e) => {
+    state.potaEnabled = !state.potaEnabled;
+    e.target.classList.toggle('active');
+    fetchSpots();
+};
+
+document.getElementById('sota-toggle').onclick = (e) => {
+    state.sotaEnabled = !state.sotaEnabled;
+    e.target.classList.toggle('active');
+    fetchSpots();
+};
+
+document.getElementById('grid').onchange = () => {
+    updateConfig();
+    fetchSpots();
+};
+
+document.getElementById('callsign').onchange = () => {
+    updateConfig();
+};
+
+document.getElementById('band-filter').onchange = (e) => {
+    state.filters.band = e.target.value;
+    fetchSpots();
+};
+
+document.getElementById('mode-filter').onchange = (e) => {
+    state.filters.mode = e.target.value;
+    fetchSpots();
+};
+
+document.getElementById('dist-limit').onchange = (e) => {
+    state.filters.dist = parseInt(e.target.value);
+    fetchSpots();
+};
+
+document.getElementById('callsign-filter').oninput = (e) => {
+    state.filters.callsign = e.target.value;
+    updateConfig();
+    renderSpots(window.currentSpots || []);
+};
+
+document.getElementById('audio-alerts').onchange = () => {
+    initAudio(); // Prompt browser permission
+};
+
+// Initial Load
+initConfig();
+// Timer loop
+setInterval(() => {
+    state.nextScan--;
+    if (state.nextScan <= 0) {
+        fetchSpots();
+    }
+    document.getElementById('next-update').innerText = state.nextScan + 's';
+}, 1000);
+
+</script>
+</body>
+</html>
