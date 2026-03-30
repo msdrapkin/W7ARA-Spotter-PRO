@@ -198,7 +198,9 @@
 
         .spot-main { display: flex; flex-direction: column; gap: 4px; }
 
-        .activator { font-family: var(--font-mono); font-size: 1.25rem; font-weight: 700; color: var(--text-bright); }
+        .activator { font-family: var(--font-mono); font-size: 1.25rem; font-weight: 700; color: var(--text-bright); transition: 0.2s; }
+        .activator a { color: inherit; text-decoration: none; display: flex; align-items: center; gap: 4px; }
+        .activator a:hover { color: var(--accent-sota); }
 
         .location { font-size: 0.85rem; color: var(--text-main); opacity: 0.8; }
 
@@ -708,7 +710,7 @@ function renderSpots(spots) {
         card.innerHTML = `
             <div class="spot-source source-${s.source}">${s.source}</div>
             <div class="spot-main">
-                <div class="activator">${s.activator}</div>
+                <div class="activator"><a href="https://www.qrz.com/db/${s.activator}" target="_blank" title="Lookup ${s.activator} on QRZ.com">${s.activator} <span style="font-size: 0.8rem; opacity: 0.5;">🔍</span></a></div>
                 <div class="location">${s.ref} - ${s.locationName || ''}</div>
                 ${s.comments ? `<div style="font-size: 0.7rem; color: #768390; margin-top: 4px;">"${s.comments}"</div>` : ''}
             </div>
