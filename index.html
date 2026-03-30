@@ -510,7 +510,7 @@ function playMorse(pattern) {
     gain.connect(audioCtx.destination);
     
     let time = now;
-    const dit = 0.08;
+    const dit = 0.092; // 13 WPM
     const dah = dit * 3;
     
     pattern.split('').forEach(char => {
