@@ -15,6 +15,14 @@ This document captures the strategic research and feasibility analysis for exten
 *   **IOTA (Islands On The Air)**: To provide the club with a gateway to rare Island DX activity.
 *   **Special Event Tracking**: Using "Watchlists" for 1x1 callsigns (e.g., **K7A**) or milestone association events.
 
+## 📱 Mobile-First Design Philosophy
+*   **Fluid Typography**: Use `clamp()` to allow font sizes to scale dynamically between phone and desktop width.
+*   **Settings Drawer**: On small screens, the filter sidebar "tows" behind a ⚙️ icon to maximize space for the live feed.
+*   **Touch Optimization**: Enlarge buttons to a minimum of **44px–48px** for reliable field use (especially for hunters wearing gloves).
+*   **Responsive Grid**: Automatically stack spot cards vertically on mobile while maintaining the multi-column view on larger shack monitors.
+
+---
+
 ## 🛰️ Performance & Radar Extensions
 *   **RBN (Reverse Beacon Network) Integration**: Monitoring local CW skimmers to "pre-spot" activators before they are manually logged.
 *   **HamAlert.org Integration**: Using the HamAlert API to create a personalized "Activity Radar" that triggers only on specific club targets.
