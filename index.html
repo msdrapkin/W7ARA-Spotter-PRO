@@ -465,7 +465,8 @@ const regionCenters = {
     'ZL1': {lat: -36.84, lon: 174.76}, 'ZL2': {lat: -41.28, lon: 174.77}, 'ZL3': {lat: -43.53, lon: 172.63},
     'ZL4': {lat: -45.87, lon: 170.50}, 'JA': {lat: 36.20, lon: 138.25},
     // DX Entities
-    'CY0': {lat: 43.93, lon: -59.91}, 'J6': {lat: 13.91, lon: -60.97}
+    'CY0': {lat: 43.93, lon: -59.91}, 'J6': {lat: 13.91, lon: -60.97},
+    'CA': {lat: 56.13, lon: -106.34}, 'JP': {lat: 36.20, lon: 138.25}
 };
 
 const stateAlias = { 'arkansas': 'US-AR', 'texas': 'US-TX', 'california': 'US-CA' };
@@ -514,11 +515,21 @@ async function fetchSpots() {
             const r = await fetch('https://api2.sota.org.uk/api/spots/20');
             const d = await r.json();
             d.forEach(s => {
-                const assoc = s.associationCode;
-                const c = regionCenters[assoc];
-                allSpots.push({ id: `sota-${s.id}`, source: 'sota', activator: s.activatorCallsign, ref: s.associationCode + '/' + s.summitCode, freq: s.frequency, mode: s.mode, time: s.timeStamp, lat: c?c.lat:null, lon: c?c.lon:null, comments: s.comments });
+                const assoc = s.associationCode ? s.associationCode.trim() : null;
+                const c = assoc ? regionCenters[assoc] : null;
+                allSpots.push({ id: `sota-${s.id}`, source: 'sota', activator: s.activatorCallsign, ref: (s.associationCode || '') + '/' + (s.summitCode || ''), freq: s.frequency, mode: s.mode, time: s.timeStamp, lat: c?c.lat:null, lon: c?c.lon:null, comments: s.comments });
             });
         }
+
+        // Global coordinate fallback for POTA based on Reference Prefix (e.g. CA-0120 -> CA)
+        allSpots.forEach(s => {
+            if (s.source === 'pota' && !s.lat && s.ref) {
+                const prefix = s.ref.split('-')[0];
+                const c = regionCenters[prefix] || regionCenters[`US-${prefix}`];
+                if (c) { s.lat = c.lat; s.lon = c.lon; }
+            }
+        });
+
         window.currentSpots = allSpots;
         renderSpots(allSpots);
     } catch(e) { console.error(e); }
@@ -528,6 +539,12 @@ async function fetchSpots() {
 
 function renderSpots(spots) {
     const container = document.getElementById('spot-container');
+    
+    // Update Header Counters
+    const potaTotal = spots.filter(s => s.source === 'pota').length;
+    const sotaTotal = spots.filter(s => s.source === 'sota').length;
+    if (document.getElementById('pota-count')) document.getElementById('pota-count').innerText = potaTotal;
+    if (document.getElementById('sota-count')) document.getElementById('sota-count').innerText = sotaTotal;
     
     // First pass: calculate distances/bearings and normalize data for EVERY spot
     spots.forEach(s => { 
