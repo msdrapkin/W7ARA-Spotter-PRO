@@ -133,6 +133,18 @@
             }
             .sidebar.open { transform: translateX(0); }
             .content { padding: 1rem; }
+            .sidebar-overlay {
+                display: none;
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0,0,0,0.7);
+                backdrop-filter: blur(4px);
+                z-index: 999;
+            }
+            .sidebar-overlay.active { display: block; }
         }
 
         .section-title {
@@ -289,6 +301,8 @@
         <div>NEXT: <b id="next-update">60s</b></div>
     </div>
 </header>
+
+<div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
 
 <main>
     <aside class="sidebar" id="sidebar">
@@ -617,7 +631,10 @@ function copyVal(v) {
 }
 
 function toggleSidebar() { 
-    document.getElementById('sidebar').classList.toggle('open'); 
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebar-overlay');
+    sidebar.classList.toggle('open');
+    if (overlay) overlay.classList.toggle('active');
 }
 
 function useGPS() {
