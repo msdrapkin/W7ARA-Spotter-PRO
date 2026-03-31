@@ -113,6 +113,7 @@
             gap: 1.5rem;
             z-index: 1000;
             transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            padding-bottom: 3rem; /* Extra space for mobile browser bars */
         }
 
         .content {
@@ -281,42 +282,29 @@
         @keyframes pulse { 0% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.5); opacity: 0.5; } 100% { transform: scale(1); opacity: 1; } }
         /* --- Club Promo --- */
         .club-promo {
-            margin-top: auto;
-            background: linear-gradient(135deg, rgba(0, 109, 170, 0.1) 0%, rgba(0, 109, 170, 0.05) 100%);
-            border: 1px solid rgba(0, 109, 170, 0.3);
+            margin-top: 1rem;
+            background: linear-gradient(135deg, rgba(0, 109, 170, 0.2) 0%, rgba(0, 109, 170, 0.1) 100%);
+            border: 1px solid rgba(0, 109, 170, 0.4);
             border-radius: 12px;
-            padding: 1.25rem;
+            padding: 1rem;
             display: flex;
             flex-direction: column;
-            gap: 10px;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            gap: 6px;
+            transition: all 0.25s ease;
             text-decoration: none;
             cursor: pointer;
             position: relative;
-            overflow: hidden;
         }
 
-        .club-promo::before {
-            content: '';
-            position: absolute;
-            top: 0; left: 0; right: 0; height: 2px;
-            background: linear-gradient(90deg, transparent, var(--accent-sota), transparent);
-            opacity: 0;
-            transition: 0.3s;
-        }
-
-        .club-promo:hover {
-            background: rgba(0, 109, 170, 0.15);
+        .club-promo:hover, .club-promo:active {
+            background: rgba(0, 109, 170, 0.3);
             border-color: var(--accent-sota);
-            transform: translateY(-3px);
-            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+            transform: scale(0.98);
         }
-
-        .club-promo:hover::before { opacity: 1; }
 
         .promo-header {
             font-weight: 800;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             color: var(--text-bright);
             display: flex;
             align-items: center;
@@ -324,20 +312,27 @@
         }
 
         .promo-body {
-            font-size: 0.75rem;
-            color: #768390;
-            line-height: 1.5;
+            font-size: 0.72rem;
+            color: var(--text-main);
+            line-height: 1.4;
             font-weight: 400;
         }
 
         .promo-footer {
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             font-weight: 800;
             color: var(--accent-sota);
             display: flex;
             align-items: center;
-            gap: 5px;
-            margin-top: 5px;
+            gap: 4px;
+            margin-top: 4px;
+        }
+
+        @media (min-width: 851px) {
+            .club-promo { margin-top: auto; padding: 1.25rem; }
+            .promo-header { font-size: 0.9rem; }
+            .promo-body { font-size: 0.75rem; }
+            .promo-footer { margin-top: 8px; }
         }
     </style>
 </head>
