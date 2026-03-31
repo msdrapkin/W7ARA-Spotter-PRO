@@ -463,7 +463,8 @@ function resolveLocation(s) {
         let locKey = stateAlias[locRaw] || s.location;
         if (locKey) c = regionCenters[locKey.trim()];
         if (!c && s.ref) {
-            const prefix = s.ref.split('-')[0];
+            let prefix = s.ref.split('-')[0].toUpperCase();
+            if (prefix === 'K') prefix = 'US';
             c = regionCenters[prefix] || regionCenters[`US-${prefix}`];
         }
     }
