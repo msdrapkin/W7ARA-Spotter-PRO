@@ -663,7 +663,7 @@ async function fetchSpots() {
             });
         }
         if (state.sotaEnabled) {
-            const r = await fetch('https://api2.sota.org.uk/api/spots/20');
+            const r = await fetch('https://api2.sota.org.uk/api/spots/100');
             const d = await r.json();
             d.forEach(s => {
                 allSpots.push({ id: `sota-${s.id}`, source: 'sota', activator: s.activatorCallsign, ref: (s.associationCode || '') + '/' + (s.summitCode || ''), freq: s.frequency, mode: s.mode, time: s.timeStamp, lat: null, lon: null, comments: s.comments });
@@ -680,12 +680,6 @@ async function fetchSpots() {
 function renderSpots(spots) {
     const container = document.getElementById('spot-container');
     
-    // Update Header Counters
-    const potaTotal = spots.filter(s => s.source === 'pota').length;
-    const sotaTotal = spots.filter(s => s.source === 'sota').length;
-    if (document.getElementById('pota-count')) document.getElementById('pota-count').innerText = potaTotal;
-    if (document.getElementById('sota-count')) document.getElementById('sota-count').innerText = sotaTotal;
-    
     // First pass: calculate distances/bearings and normalize data for EVERY spot
     spots.forEach(s => { 
         const loc = resolveLocation(s);
@@ -699,36 +693,13 @@ function renderSpots(spots) {
         }
         s.calculatedBand = freqToBand(s.freq);
     });
-    
-    // Deduplication pass
-    const uniqueSpots = [];
-    const seenKeys = new Set();
-    
-    // Sort spots by time (newest first) to keep the freshest one
-    spots.sort((a, b) => new Date(b.time) - new Date(a.time));
 
-    spots.forEach(s => {
-        // Group by Activator, Frequency (rounded to 1kHz), and Mode
-        const key = `${s.activator.toUpperCase()}-${Math.round(s.freq)}-${s.mode.toUpperCase()}`;
-        if (!seenKeys.has(key)) {
-            uniqueSpots.push(s);
-            seenKeys.add(key);
-        }
-    });
-
-    // Comprehensive filter logic on UNIQUE spots
-    const filtered = uniqueSpots.filter(s => {
-        // Source Filter
+    // 1. Filter ALL spots first to calculate accurate header counts
+    const filteredAll = spots.filter(s => {
         if (s.source === 'pota' && !state.potaEnabled) return false;
         if (s.source === 'sota' && !state.sotaEnabled) return false;
-
-        // Distance Filter
         if (state.filters.dist && s.distance && s.distance > state.filters.dist) return false;
-
-        // Callsign Filter
         if (state.filters.callsign && !s.activator.toUpperCase().includes(state.filters.callsign.toUpperCase())) return false;
-
-        // Band Filter
         if (state.filters.band !== 'all') {
             if (state.filters.band === 'vHF') {
                 if (!['6m', '2m'].includes(s.calculatedBand)) return false;
@@ -736,20 +707,40 @@ function renderSpots(spots) {
                 return false;
             }
         }
-
-        // Mode Filter
         if (state.filters.mode !== 'all') {
             const m = s.mode.toUpperCase();
             if (state.filters.mode === 'SSB' && !m.includes('SSB') && !m.includes('PHONE') && !m.includes('FM')) return false;
-            if (state.filters.mode === 'CW' && !m.includes('CW')) return false;
-            if (state.filters.mode === 'DIGITAL' && !m.includes('FT8') && !m.includes('JS8') && !m.includes('RTTY')) return false;
+            if (state.filters.mode === 'CW' && m !== 'CW') return false;
+            if (state.filters.mode === 'DIGITAL' && m !== 'FT8' && m !== 'FT4' && m !== 'JS8' && !m.includes('DIGITAL')) return false;
         }
-
         return true;
     });
 
+
+    // 3. Deduplication pass on FILTERED spots
+    const uniqueSpots = [];
+    const seenKeys = new Set();
+    
+    // Sort spots by time (newest first)
+    filteredAll.sort((a, b) => new Date(b.time) - new Date(a.time));
+
+    filteredAll.forEach(s => {
+        const key = `${s.activator.toUpperCase()}-${Math.round(s.freq)}-${s.mode.toUpperCase()}`;
+        if (!seenKeys.has(key)) {
+            uniqueSpots.push(s);
+            seenKeys.add(key);
+        }
+    });
+
+    // 4. Update Header Counters with UNIQUE/VISIBLE results
+    const potaVisible = uniqueSpots.filter(s => s.source === 'pota').length;
+    const sotaVisible = uniqueSpots.filter(s => s.source === 'sota').length;
+    if (document.getElementById('pota-count')) document.getElementById('pota-count').innerText = potaVisible;
+    if (document.getElementById('sota-count')) document.getElementById('sota-count').innerText = sotaVisible;
+
+    // 5. Final render of unique spots
     container.innerHTML = '';
-    filtered.forEach(s => {
+    uniqueSpots.forEach(s => {
         const isNew = !state.knownSpots.has(s.id);
         if (isNew) { state.knownSpots.add(s.id); if (state.initialized) playMorse(s.source === 'pota' ? '.--.' : '...'); }
         const card = document.createElement('div');
