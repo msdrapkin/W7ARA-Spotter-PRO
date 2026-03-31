@@ -279,6 +279,66 @@
         #scanning-indicator.active { display: flex; }
         .loader-dot { width: 6px; height: 6px; background: currentColor; border-radius: 50%; animation: pulse 1s infinite; }
         @keyframes pulse { 0% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.5); opacity: 0.5; } 100% { transform: scale(1); opacity: 1; } }
+        /* --- Club Promo --- */
+        .club-promo {
+            margin-top: auto;
+            background: linear-gradient(135deg, rgba(0, 109, 170, 0.1) 0%, rgba(0, 109, 170, 0.05) 100%);
+            border: 1px solid rgba(0, 109, 170, 0.3);
+            border-radius: 12px;
+            padding: 1.25rem;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            text-decoration: none;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .club-promo::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; height: 2px;
+            background: linear-gradient(90deg, transparent, var(--accent-sota), transparent);
+            opacity: 0;
+            transition: 0.3s;
+        }
+
+        .club-promo:hover {
+            background: rgba(0, 109, 170, 0.15);
+            border-color: var(--accent-sota);
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+        }
+
+        .club-promo:hover::before { opacity: 1; }
+
+        .promo-header {
+            font-weight: 800;
+            font-size: 0.9rem;
+            color: var(--text-bright);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .promo-body {
+            font-size: 0.75rem;
+            color: #768390;
+            line-height: 1.5;
+            font-weight: 400;
+        }
+
+        .promo-footer {
+            font-size: 0.8rem;
+            font-weight: 800;
+            color: var(--accent-sota);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            margin-top: 5px;
+        }
     </style>
 </head>
 <body>
@@ -359,7 +419,15 @@
             </div>
         </div>
 
-        <button class="action" onclick="fetchSpots(); toggleSidebar();" style="width: 100%; margin-top: 1rem;">REFRESH NOW</button>
+        <button class="action" onclick="fetchSpots(); toggleSidebar();" style="width: 100%; margin: 1rem 0;">REFRESH NOW</button>
+
+        <a href="https://w7ara.net" target="_blank" class="club-promo">
+            <div class="promo-header">Who is W7ARA anyway? 🌵</div>
+            <div class="promo-body">
+                The Arizona Repeater Association supports amateur radio across the Southwest. Explore our repeaters, meetings, and club events!
+            </div>
+            <div class="promo-footer">Visit w7ara.net 📡 ↗</div>
+        </a>
     </aside>
 
     <section class="content">
