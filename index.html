@@ -380,6 +380,15 @@ const state = {
     filters: { dist: 5000, band: 'all', mode: 'all', callsign: '' }
 };
 
+const stateAlias = { 
+    'arkansas': 'US-AR', 'texas': 'US-TX', 'california': 'US-CA', 'arizona': 'US-AZ', 
+    'utah': 'US-UT', 'nevada': 'US-NV', 'colorado': 'US-CO', 'new mexico': 'US-NM',
+    'oregon': 'US-OR', 'washington': 'US-WA', 'idaho': 'US-ID', 'montana': 'US-MT',
+    'new york': 'US-NY', 'pennsylvania': 'US-PA', 'florida': 'US-FL', 'alabama': 'US-AL',
+    'alberta': 'CA-AB', 'british columbia': 'CA-BC', 'ontario': 'CA-ON', 'quebec': 'CA-QC',
+    'australia': 'AU', 'new zealand': 'NZ', 'nova scotia': 'Nova Scotia', 'japan': 'JP'
+};
+
 // --- Utils ---
 function gridToCoords(grid) {
     if (!grid || grid.length < 4) return null;
@@ -446,11 +455,13 @@ function resolveLocation(s) {
     if (s.lat) return { lat: s.lat, lon: s.lon };
     let c = null;
     if (s.source === 'sota') {
-        const assoc = s.ref.split('/')[0];
+        const assoc = s.ref ? s.ref.split('/')[0] : null;
         c = regionCenters[assoc];
     } else {
         // POTA
-        if (s.location) c = regionCenters[s.location.trim()];
+        let locRaw = (s.location || "").trim().toLowerCase();
+        let locKey = stateAlias[locRaw] || s.location;
+        if (locKey) c = regionCenters[locKey.trim()];
         if (!c && s.ref) {
             const prefix = s.ref.split('-')[0];
             c = regionCenters[prefix] || regionCenters[`US-${prefix}`];
@@ -491,10 +502,13 @@ const regionCenters = {
     'ZL4': {lat: -45.87, lon: 170.50}, 'JA': {lat: 36.20, lon: 138.25},
     // DX Entities
     'CY0': {lat: 43.93, lon: -59.91}, 'J6': {lat: 13.91, lon: -60.97},
-    'CA': {lat: 56.13, lon: -106.34}, 'JP': {lat: 36.20, lon: 138.25}
+    'CA': {lat: 56.13, lon: -106.34}, 'JP': {lat: 36.20, lon: 138.25},
+    'AU': {lat: -25.27, lon: 133.77}, 'NZ': {lat: -41.28, lon: 174.77}, 'US': {lat: 39.82, lon: -98.57},
+    'CA-NS': {lat: 45.0, lon: -63.0}, 'CA-NB': {lat: 46.5, lon: -66.5},
+    'Nova Scotia': {lat: 45.0, lon: -63.0}, 'Australia': {lat: -25.27, lon: 133.77},
+    'New Zealand': {lat: -40.90, lon: 174.88}
 };
 
-const stateAlias = { 'arkansas': 'US-AR', 'texas': 'US-TX', 'california': 'US-CA' };
 
 // --- Morse Audio Engine ---
 let audioCtx = null;
