@@ -434,6 +434,23 @@ function normalizeBand(b) {
     return b;
 }
 
+function resolveLocation(s) {
+    if (s.lat) return { lat: s.lat, lon: s.lon };
+    let c = null;
+    if (s.source === 'sota') {
+        const assoc = s.ref.split('/')[0];
+        c = regionCenters[assoc];
+    } else {
+        // POTA
+        if (s.location) c = regionCenters[s.location.trim()];
+        if (!c && s.ref) {
+            const prefix = s.ref.split('-')[0];
+            c = regionCenters[prefix] || regionCenters[`US-${prefix}`];
+        }
+    }
+    return c;
+}
+
 const regionCenters = {
     'US-AL': {lat: 32.31, lon: -86.90}, 'US-AK': {lat: 63.58, lon: -154.49}, 'US-AZ': {lat: 34.04, lon: -111.09},
     'US-AR': {lat: 34.55, lon: -92.28}, 'US-CA': {lat: 36.77, lon: -119.41}, 'US-CO': {lat: 39.55, lon: -105.78},
@@ -508,27 +525,16 @@ async function fetchSpots() {
                 const g = extractGrid(s.comments);
                 let c = g ? gridToCoords(g) : null;
                 if (!c && s.locationDesc) c = regionCenters[s.locationDesc.trim()];
-                allSpots.push({ id: `pota-${s.spotId}`, source: 'pota', activator: s.activator, ref: s.reference, freq: s.frequency, mode: s.mode, time: s.spotTime.replace(' ', 'T'), lat: c?c.lat:null, lon: c?c.lon:null, comments: s.comments });
+                allSpots.push({ id: `pota-${s.spotId}`, source: 'pota', activator: s.activator, ref: s.reference, freq: s.frequency, mode: s.mode, time: s.spotTime.replace(' ', 'T'), lat: c?c.lat:null, lon: c?c.lon:null, location: s.locationDesc, comments: s.comments });
             });
         }
         if (state.sotaEnabled) {
             const r = await fetch('https://api2.sota.org.uk/api/spots/20');
             const d = await r.json();
             d.forEach(s => {
-                const assoc = s.associationCode ? s.associationCode.trim() : null;
-                const c = assoc ? regionCenters[assoc] : null;
-                allSpots.push({ id: `sota-${s.id}`, source: 'sota', activator: s.activatorCallsign, ref: (s.associationCode || '') + '/' + (s.summitCode || ''), freq: s.frequency, mode: s.mode, time: s.timeStamp, lat: c?c.lat:null, lon: c?c.lon:null, comments: s.comments });
+                allSpots.push({ id: `sota-${s.id}`, source: 'sota', activator: s.activatorCallsign, ref: (s.associationCode || '') + '/' + (s.summitCode || ''), freq: s.frequency, mode: s.mode, time: s.timeStamp, lat: null, lon: null, comments: s.comments });
             });
         }
-
-        // Global coordinate fallback for POTA based on Reference Prefix (e.g. CA-0120 -> CA)
-        allSpots.forEach(s => {
-            if (s.source === 'pota' && !s.lat && s.ref) {
-                const prefix = s.ref.split('-')[0];
-                const c = regionCenters[prefix] || regionCenters[`US-${prefix}`];
-                if (c) { s.lat = c.lat; s.lon = c.lon; }
-            }
-        });
 
         window.currentSpots = allSpots;
         renderSpots(allSpots);
@@ -548,9 +554,10 @@ function renderSpots(spots) {
     
     // First pass: calculate distances/bearings and normalize data for EVERY spot
     spots.forEach(s => { 
-        if (s.lat && state.myCoords) { 
-            s.distance = calculateDistance(state.myCoords, s); 
-            s.bearing = calculateBearing(state.myCoords, s); 
+        const loc = resolveLocation(s);
+        if (loc && state.myCoords) { 
+            s.distance = calculateDistance(state.myCoords, loc); 
+            s.bearing = calculateBearing(state.myCoords, loc); 
         } 
         s.calculatedBand = freqToBand(s.freq);
     });
