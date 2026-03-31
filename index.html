@@ -429,7 +429,11 @@ function extractGrid(str) {
 }
 
 function freqToBand(f) {
-    f = parseFloat(f) * 1000; // kHz
+    if (!f) return "";
+    f = parseFloat(f);
+    // Normalize: If it's a small number like 14.06, it's MHz. If it's > 100, it's likely kHz.
+    if (f < 100) f = f * 1000; 
+    
     if (f >= 1800 && f <= 2000) return "160m";
     if (f >= 3500 && f <= 4000) return "80m";
     if (f >= 7000 && f <= 7300) return "40m";
