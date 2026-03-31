@@ -384,8 +384,16 @@ const state = {
 function gridToCoords(grid) {
     if (!grid || grid.length < 4) return null;
     grid = grid.toUpperCase();
-    const lon = (grid.charCodeAt(0) - 65) * 20 + (grid.charCodeAt(2) - 48) * 2 - 180 + 1;
-    const lat = (grid.charCodeAt(1) - 65) * 10 + (grid.charCodeAt(3) - 48) - 90 + 0.5;
+    let lon = (grid.charCodeAt(0) - 65) * 20 + (grid.charCodeAt(2) - 48) * 2 - 180;
+    let lat = (grid.charCodeAt(1) - 65) * 10 + (grid.charCodeAt(3) - 48) - 90;
+    
+    if (grid.length >= 6) {
+        lon += (grid.charCodeAt(4) - 65) * (2 / 24) + (1 / 24);
+        lat += (grid.charCodeAt(5) - 65) * (1 / 24) + (0.5 / 24);
+    } else {
+        lon += 1;
+        lat += 0.5;
+    }
     return { lat, lon };
 }
 
@@ -562,8 +570,24 @@ function renderSpots(spots) {
         s.calculatedBand = freqToBand(s.freq);
     });
     
-    // Comprehensive filter logic
-    const filtered = spots.filter(s => {
+    // Deduplication pass
+    const uniqueSpots = [];
+    const seenKeys = new Set();
+    
+    // Sort spots by time (newest first) to keep the freshest one
+    spots.sort((a, b) => new Date(b.time) - new Date(a.time));
+
+    spots.forEach(s => {
+        // Group by Activator, Frequency (rounded to 1kHz), and Mode
+        const key = `${s.activator.toUpperCase()}-${Math.round(s.freq)}-${s.mode.toUpperCase()}`;
+        if (!seenKeys.has(key)) {
+            uniqueSpots.push(s);
+            seenKeys.add(key);
+        }
+    });
+
+    // Comprehensive filter logic on UNIQUE spots
+    const filtered = uniqueSpots.filter(s => {
         // Source Filter
         if (s.source === 'pota' && !state.potaEnabled) return false;
         if (s.source === 'sota' && !state.sotaEnabled) return false;
