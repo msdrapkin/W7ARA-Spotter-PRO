@@ -577,10 +577,14 @@ function renderSpots(spots) {
     // First pass: calculate distances/bearings and normalize data for EVERY spot
     spots.forEach(s => { 
         const loc = resolveLocation(s);
-        if (loc && state.myCoords) { 
-            s.distance = calculateDistance(state.myCoords, loc); 
-            s.bearing = calculateBearing(state.myCoords, loc); 
-        } 
+        if (loc) {
+            s.lat = loc.lat;
+            s.lon = loc.lon;
+            if (state.myCoords) {
+                s.distance = calculateDistance(state.myCoords, loc);
+                s.bearing = calculateBearing(state.myCoords, loc);
+            }
+        }
         s.calculatedBand = freqToBand(s.freq);
     });
     
