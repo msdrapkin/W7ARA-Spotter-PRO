@@ -898,7 +898,11 @@ function useGPS() {
 // --- Solar & Countdown ---
 async function fetchSolarData() {
     try {
-        const res = await fetch('https://www.hamqsl.com/solarxml.php');
+        // Using a CORS proxy to fetch the HamQSL XML feed reliably in the browser
+        const targetUrl = encodeURIComponent('https://www.hamqsl.com/solarxml.php');
+        const res = await fetch(`https://api.allorigins.win/raw?url=${targetUrl}`);
+        if (!res.ok) throw new Error("Proxy fetch failed");
+
         const text = await res.text();
         const parser = new DOMParser();
         const xml = parser.parseFromString(text, "text/xml");
@@ -925,7 +929,8 @@ async function fetchSolarData() {
         }
         console.log(`Solar Updated: SFI=${sfi}, K=${kindex}`);
     } catch (e) {
-        console.warn("Solar fetch failed", e);
+        console.warn("Solar fetch failed, retrying in 5 mins", e);
+        setTimeout(fetchSolarData, 300000); // Retry in 5 mins
     }
 }
 
