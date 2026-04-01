@@ -477,6 +477,19 @@
 
         <button class="action" onclick="fetchSpots(); toggleSidebar();" style="width: 100%; margin: 1rem 0;">REFRESH NOW</button>
 
+        <div style="margin-top:auto; padding-top:1rem; border-top:1px solid #30363d; margin-bottom: 1rem;">
+            <div class="section-title">Field Glossary 📚</div>
+            <div style="font-size:0.75rem; color:#8b949e; line-height:1.4; display:flex; flex-direction:column; gap:6px;">
+                <div><b>SFI:</b> Solar Flux Index (Ionospheric "Charge"). Higher = Better for 10m/15m/20m.</div>
+                <div><b>K-Index:</b> Geomagnetic Stability (Noise). <span style="color:#4CAF50;">0-2</span> is quiet/best.</div>
+                <div><b>A-Index:</b> 24-hr stability average. Lower = more consistent.</div>
+                <div style="border-top:1px solid #30363d; padding-top:4px; margin-top:2px;"><b>Prop Pulse Symbology:</b></div>
+                <div style="display:flex; align-items:center; gap:6px;"><span class="solar-dot green" style="position:static; width:6px; height:6px;"></span> <b>SOLID:</b> Peak connection likelihood.</div>
+                <div style="display:flex; align-items:center; gap:6px;"><span class="solar-dot yellow" style="position:static; width:6px; height:6px;"></span> <b>SKIP?:</b> Possible skip-zone (you might be too close).</div>
+                <div style="display:flex; align-items:center; gap:6px;"><span class="solar-dot red" style="position:static; width:6px; height:6px;"></span> <b>STORMY:</b> High noise levels detected globally.</div>
+            </div>
+        </div>
+
         <a href="https://w7ara.net" target="_blank" class="club-promo">
             <div class="promo-header">Who is W7ARA anyway? 🌵</div>
             <div class="promo-body">
