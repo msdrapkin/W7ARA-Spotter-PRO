@@ -117,6 +117,39 @@
 
         .stats-bar b { color: var(--accent-sota); }
 
+        /* --- Solar Bar --- */
+        .solar-bar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 0.75rem;
+            font-family: var(--font-mono);
+            color: #768390;
+            padding: 4px 12px;
+            background: rgba(255,255,255,0.03);
+            border-radius: 20px;
+            border: 1px solid rgba(255,255,255,0.05);
+            transition: all 0.3s ease;
+        }
+        .solar-bar:hover { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.1); }
+        .solar-bar b { color: var(--accent-sota); }
+        .solar-status { display: flex; align-items: center; gap: 6px; }
+        .solar-dot { 
+            width: 8px; height: 8px; border-radius: 50%; 
+            display: inline-block; 
+            box-shadow: 0 0 6px var(--dot-color);
+            background-color: var(--dot-color);
+        }
+        .solar-dot.green { --dot-color: #2ea043; }
+        .solar-dot.yellow { --dot-color: #d29922; }
+        .solar-dot.red { --dot-color: #f85149; }
+
+        @media (max-width: 850px) {
+            header .logo { margin-bottom: 2px; }
+            .solar-bar { width: 100%; justify-content: center; order: 3; margin-top: 5px; font-size: 0.7rem; }
+            .stats-bar { order: 2; margin-top: 5px; }
+        }
+
         /* --- Layout --- */
         main {
             display: flex;
@@ -374,6 +407,11 @@
     </div>
 
     <div class="stats-bar">
+        <div class="solar-bar" id="solar-bar" title="Solar Activity Indicators">
+            <span>SFI <b id="solar-sfi">--</b></span>
+            <span>K <b id="solar-k">--</b> <i id="solar-k-dot" class="solar-dot"></i></span>
+            <span>A <b id="solar-a">--</b></span>
+        </div>
         <div>POTA: <b id="pota-count">0</b></div>
         <div>SOTA: <b id="sota-count">0</b></div>
         <div>NEXT: <b id="next-update">60s</b></div>
@@ -800,10 +838,11 @@ function renderSpots(spots) {
 }
 
 function copyVal(v) {
-    navigator.clipboard.writeText(v);
-    const s = document.getElementById('copy-status');
-    s.classList.add('visible');
-    setTimeout(() => s.classList.remove('visible'), 2000);
+    navigator.clipboard.writeText(v).then(() => {
+        const s = document.getElementById('copy-status');
+        s.classList.add('visible');
+        setTimeout(() => s.classList.remove('visible'), 2000);
+    });
 }
 
 
@@ -834,15 +873,6 @@ document.getElementById('sota-toggle').onclick = (e) => {
     fetchSpots();
 };
 
-// --- Copy & UI ---
-function copyVal(v) {
-    navigator.clipboard.writeText(v).then(() => {
-        const s = document.getElementById('copy-status');
-        s.classList.add('visible');
-        setTimeout(() => s.classList.remove('visible'), 2000);
-    });
-}
-
 function toggleSidebar() { 
     const sidebar = document.getElementById('sidebar');
     const overlay = document.getElementById('sidebar-overlay');
@@ -853,10 +883,8 @@ function toggleSidebar() {
 function useGPS() {
     if (!navigator.geolocation) return alert("GPS not supported");
     navigator.geolocation.getCurrentPosition(p => {
-        // Find grid from lat/lon
         const lat = p.coords.latitude;
         const lon = p.coords.longitude;
-        // Simple grid calculation (6-char)
         const char1 = String.fromCharCode(Math.floor((lon + 180) / 20) + 65);
         const char2 = String.fromCharCode(Math.floor((lat + 90) / 10) + 65);
         const char3 = Math.floor(((lon + 180) % 20) / 2).toString();
@@ -867,29 +895,65 @@ function useGPS() {
     });
 }
 
-// Countdown timer logic
+// --- Solar & Countdown ---
+async function fetchSolarData() {
+    try {
+        const res = await fetch('https://www.hamqsl.com/solarxml.php');
+        const text = await res.text();
+        const parser = new DOMParser();
+        const xml = parser.parseFromString(text, "text/xml");
+        
+        const sfi = xml.querySelector('solarflux')?.textContent || '--';
+        const kindex = xml.querySelector('kindex')?.textContent || '--';
+        const aindex = xml.querySelector('aindex')?.textContent || '--';
+
+        const sfiEl = document.getElementById('solar-sfi');
+        const kEl = document.getElementById('solar-k');
+        const aEl = document.getElementById('solar-a');
+        const dot = document.getElementById('solar-k-dot');
+
+        if (sfiEl) sfiEl.textContent = sfi;
+        if (kEl) kEl.textContent = kindex;
+        if (aEl) aEl.textContent = aindex;
+
+        if (dot) {
+            const kVal = parseInt(kindex);
+            dot.className = 'solar-dot';
+            if (kVal <= 2) dot.classList.add('green');
+            else if (kVal <= 4) dot.classList.add('yellow');
+            else if (kVal > 4) dot.classList.add('red');
+        }
+        console.log(`Solar Updated: SFI=${sfi}, K=${kindex}`);
+    } catch (e) {
+        console.warn("Solar fetch failed", e);
+    }
+}
+
 let nextUpdate = 60;
-setInterval(() => {
+function updateCountdown() {
     nextUpdate--;
     if (nextUpdate <= 0) {
         nextUpdate = 60;
         fetchSpots();
     }
-    document.getElementById('next-update').innerText = nextUpdate + "s";
-}, 1000);
+    const el = document.getElementById('next-update');
+    if (el) el.innerText = nextUpdate + "s";
+}
 
-// --- Initialization ---
-window.onload = () => {
+// Initial Launch
+window.onload = async () => {
     // Check if we have a saved grid
     const savedGrid = localStorage.getItem('ara-spotter-grid');
-    if (savedGrid) document.getElementById('grid').value = savedGrid;
+    if (savedGrid) {
+        document.getElementById('grid').value = savedGrid;
+        state.myCoords = gridToCoords(savedGrid);
+    }
     
-    // Initial fetch
-    updateState();
-    state.initialized = false;
-    fetchSpots().then(() => {
-        state.initialized = true;
-    });
+    await fetchSpots();
+    state.initialized = true; // Enable audio alerts after first fetch
+    fetchSolarData();
+    setInterval(updateCountdown, 1000);
+    setInterval(fetchSolarData, 1800000); // 30 mins
 };
 
 // Persist grid
