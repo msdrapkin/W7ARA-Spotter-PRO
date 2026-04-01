@@ -967,9 +967,17 @@ async function fetchSolarData() {
         const parser = new DOMParser();
         const xml = parser.parseFromString(text, "text/xml");
         
-        const sfi = xml.querySelector('solarflux')?.textContent || '--';
-        const kindex = xml.querySelector('kindex')?.textContent || '--';
-        const aindex = xml.querySelector('aindex')?.textContent || '--';
+        // Android/Mobile DOMParser can be very strict or have diff casing than desktop
+        const getTag = (x, tag) => {
+            const el = x.getElementsByTagName(tag)[0] || 
+                       x.getElementsByTagName(tag.toUpperCase())[0] ||
+                       x.querySelector(tag);
+            return el?.textContent || '--';
+        };
+
+        const sfi = getTag(xml, 'solarflux');
+        const kindex = getTag(xml, 'kindex');
+        const aindex = getTag(xml, 'aindex');
 
         const sfiEl = document.getElementById('solar-sfi');
         const kEl = document.getElementById('solar-k');

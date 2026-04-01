@@ -1,4 +1,4 @@
-const CACHE_NAME = 'w7ara-spotter-v2';
+const CACHE_NAME = 'w7ara-spotter-v3';
 const ASSETS = [
     './index.html',
     './icon.png',
