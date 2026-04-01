@@ -813,20 +813,30 @@ function renderSpots(spots) {
     uniqueSpots.forEach(s => {
         const isNew = !state.knownSpots.has(s.id);
         if (isNew) { state.knownSpots.add(s.id); if (state.initialized) playMorse(s.source === 'pota' ? '.--.' : '...'); }
+        
+        // --- PROP PULSE CALCULATION ---
+        const prop = getPropInsight(s);
+        
         const card = document.createElement('div');
         card.className = `spot-card ${isNew ? 'new' : ''}`;
         card.innerHTML = `
             <div class="spot-source source-${s.source}">${s.source}</div>
             <div class="spot-main">
-                <div class="activator"><a href="https://www.qrz.com/db/${s.activator}" target="_blank">${s.activator} 🔍</a></div>
-                <div style="font-size:0.75rem opacity:0.8;">${s.ref}</div>
+                <div class="activator" style="display:flex; align-items:center gap:8px;">
+                    <a href="https://www.qrz.com/db/${s.activator}" target="_blank">${s.activator} 🔍</a>
+                    <span class="prop-dot" title="${prop.label}" style="background:${prop.color}; width:8px; height:8px; border-radius:50%; display:inline-block; box-shadow: 0 0 6px ${prop.color};"></span>
+                </div>
+                <div style="font-size:0.75rem; opacity:0.8;">${s.ref}</div>
             </div>
             <div class="freq-info">
                 <div class="frequency">${s.freq}</div>
                 <div class="mode">${s.mode}</div>
             </div>
             <div class="metadata">
-                <div>📍 ${s.distance || '--'} mi</div>
+                <div style="display:flex; align-items:center; gap:4px;">
+                   📍 ${s.distance || '--'} mi
+                   <span style="font-size:0.65rem; color:${prop.color}; font-weight:bold;">${prop.label.toUpperCase()}</span>
+                </div>
                 <div style="display:flex; gap:6px;">
                     ${s.lat ? `<button class="action" style="padding:4px 8px; min-height:32px; background:#1c2128;" onclick="window.open('https://maps.google.com/?q=${s.lat},${s.lon}')">🗺️</button>` : ''}
                     <button class="action" onclick="copyVal('${s.freq}')" style="padding:4px 8px; min-height:32px;">📋</button>
@@ -835,6 +845,43 @@ function renderSpots(spots) {
         `;
         container.appendChild(card);
     });
+}
+
+function getPropInsight(s) {
+    const sfiText = document.getElementById('solar-sfi')?.textContent;
+    const kText = document.getElementById('solar-k')?.textContent;
+    const sfi = parseInt(sfiText) || 100;
+    const k = parseInt(kText) || 2;
+    const band = s.calculatedBand;
+    const d = s.distance;
+
+    // Severe Storm? Global blackout likelihood
+    if (k >= 5) return { color: '#ff4444', label: 'Stormy' }; 
+
+    // High Bands: 10m, 12m, 15m
+    if (['10m', '12m', '15m'].includes(band)) {
+        if (sfi > 120 && d > 1200) return { color: '#4CAF50', label: 'Great' }; // Open/DX
+        if (sfi > 100 && d > 800) return { color: '#8BC34A', label: 'Fair' }; 
+        if (sfi < 90) return { color: '#666', label: 'Closed' };
+        return { color: '#FFC107', label: 'Weak' };
+    }
+
+    // Middle Bands: 17m, 20m (The Workhorses)
+    if (['17m', '20m'].includes(band)) {
+        if (d > 1000) return { color: '#4CAF50', label: 'Solid' }; // Good skip
+        if (d < 400) return { color: '#FF9800', label: 'Skip?' };  // Likely skipping over you
+        return { color: '#4CAF50', label: 'Strong' };
+    }
+
+    // Low Bands: 40m, 60m, 80m
+    if (['40m', '60m', '80m'].includes(band)) {
+        if (d < 600) return { color: '#4CAF50', label: 'Local' };  // Excellent NVIS/Ground
+        if (d > 1500) return { color: '#8BC34A', label: 'DX' };     // Possible long-haul
+        return { color: '#4CAF50', label: 'Good' };
+    }
+
+    // Default Good
+    return { color: '#4CAF50', label: 'G' };
 }
 
 function copyVal(v) {
