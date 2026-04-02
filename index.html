@@ -599,8 +599,10 @@ function resolveLocation(s) {
     if (s.lat) return { lat: s.lat, lon: s.lon };
     let c = null;
     if (s.source === 'sota') {
-        const assoc = s.ref ? s.ref.split('/')[0] : null;
-        c = regionCenters[assoc];
+        const assoc = s.ref ? s.ref.split('/')[0].toUpperCase() : null;
+        if (assoc) {
+            c = regionCenters[assoc] || regionCenters[assoc.substring(0,2)] || regionCenters[assoc.substring(0,1)];
+        }
     } else {
         // POTA
         let locRaw = (s.location || "").trim().toLowerCase();
@@ -662,7 +664,7 @@ const regionCenters = {
     'VK3': {lat: -37.81, lon: 144.96}, 'VK4': {lat: -27.46, lon: 153.02}, 'VK5': {lat: -34.92, lon: 138.60},
     'VK6': {lat: -31.95, lon: 115.86}, 'VK7': {lat: -42.88, lon: 147.32}, 'VK8': {lat: -12.46, lon: 130.84},
     'ZL1': {lat: -36.84, lon: 174.76}, 'ZL2': {lat: -41.28, lon: 174.77}, 'ZL3': {lat: -43.53, lon: 172.63},
-    'ZL4': {lat: -45.87, lon: 170.50}, 'JA': {lat: 36.20, lon: 138.25},
+    'ZL4': {lat: -45.87, lon: 170.50}, 'JA': {lat: 36.20, lon: 138.25}, 'JE': {lat: 36.20, lon: 138.25},
     // DX Entities
     'CY0': {lat: 43.93, lon: -59.91}, 'J6': {lat: 13.91, lon: -60.97},
     'CA': {lat: 56.13, lon: -106.34}, 'JP': {lat: 36.20, lon: 138.25},
