@@ -895,14 +895,21 @@ function getPropInsight(s) {
     }
 
     // Low Bands: 40m, 60m, 80m
-    if (['40m', '60m', '80m'].includes(band)) {
+    if (['40m', '60m', '80m', '160m'].includes(band)) {
         if (d < 600) return { color: '#4CAF50', label: 'Local' };  // Excellent NVIS/Ground
         if (d > 1500) return { color: '#8BC34A', label: 'DX' };     // Possible long-haul
         return { color: '#4CAF50', label: 'Good' };
     }
 
+    // VHF/UHF (Experimental Tropo/Line of Sight)
+    if (['2m', '6m', '70cm'].includes(band)) {
+        if (d > 200) return { color: '#8BC34A', label: 'DX/Tropo' }; 
+        if (d < 100) return { color: '#4CAF50', label: 'Strong' };
+        return { color: '#4CAF50', label: 'Good' };
+    }
+
     // Default Good
-    return { color: '#4CAF50', label: 'G' };
+    return { color: '#4CAF50', label: 'Good' };
 }
 
 function copyVal(v) {
