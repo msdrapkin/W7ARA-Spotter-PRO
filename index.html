@@ -571,11 +571,13 @@ function extractGrid(str) {
 function freqToBand(f) {
     if (!f) return "";
     f = parseFloat(f);
-    // Normalize: If it's a small number like 14.06, it's MHz. If it's > 100, it's likely kHz.
-    if (f < 100) f = f * 1000; 
+    // Normalize: If it's a number like 144.31, it's MHz.
+    // Amateur radio bands are generally < 1000 MHz except for microwave.
+    if (f < 1000) f = f * 1000; 
     
     if (f >= 1800 && f <= 2000) return "160m";
     if (f >= 3500 && f <= 4000) return "80m";
+    if (f >= 5330 && f <= 5410) return "60m";
     if (f >= 7000 && f <= 7300) return "40m";
     if (f >= 10100 && f <= 10150) return "30m";
     if (f >= 14000 && f <= 14350) return "20m";
@@ -585,6 +587,7 @@ function freqToBand(f) {
     if (f >= 28000 && f <= 29700) return "10m";
     if (f >= 50000 && f <= 54000) return "6m";
     if (f >= 144000 && f <= 148000) return "2m";
+    if (f >= 420000 && f <= 450000) return "70cm";
     return "";
 }
 
@@ -793,7 +796,7 @@ function renderSpots(spots) {
         if (state.filters.callsign && !s.activator.toUpperCase().includes(state.filters.callsign.toUpperCase())) return false;
         if (state.filters.band !== 'all') {
             if (state.filters.band === 'vHF') {
-                if (!['6m', '2m'].includes(s.calculatedBand)) return false;
+                if (!['6m', '2m', '70cm'].includes(s.calculatedBand)) return false;
             } else if (s.calculatedBand !== state.filters.band) {
                 return false;
             }
