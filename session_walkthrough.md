@@ -59,16 +59,27 @@ This document tracks the technical evolution of the **Spotter-PRO v2** applicati
 
 ---
 
-## 🟢 Phase 5: The "Prop-Pulse" Engine
-**Objective**: Automate signal-likelihood calculations.
+---
 
-### 5.1 Heuristic Modeling
-- **Challenge**: Operators shouldn't have to be math geniuses to know if a 2,000-mile 40m spot is worth chasing at noon.
-- **Solution**: Implemented the **getPropInsight** engine. It weighs distance, band (80m-6m), and current SFI/K data to label spots as:
-    - **SOLID / DX**: Higher bands with a clear skip path.
-    - **STRONG / LOCAL**: NVIS or groundwave perfection.
-    - **SKIP?**: Warning that you are likely in the "silent zone" (too far for groundwave, too close for first skip).
-    - **WEAK**: High distance with low solar flux or high geomagnetic noise.
+## 🛰️ Phase 6: Global DX & Regional Mapping
+**Objective**: Resolve accurate distances for international regions.
+
+### 6.1 The "Japan Call Area" Problem
+- **Challenge**: SOTA spots from Japan (e.g., `JA6/KG-095`) often mapped to a generic Tokyo center point, leading to inaccurate 400-mile errors across islands.
+- **Solution**: Implemented a **Regional Sub-Prefix Matcher** for the JA-series (JA1–JA9, JA0). The app now identifies the specific call area and maps to the correct regional center (e.g., Kyushu for JA6) before falling back to the country center.
+
+---
+
+## 📻 Phase 7: VHF/UHF Field Utility
+**Objective**: Enable effective 2m/6m/70cm hunting in the field.
+
+### 7.1 The "MHz Multiplier" Fix
+- **Challenge**: Spots on 144 MHz or 440 MHz were being misidentified as "0.144 kHz" due to legacy frequency scaling, causing them to disappear when filters were applied.
+- **Solution**: Shifted the auto-scaling threshold to **1000 MHz**. This correctly identifies VHF/UHF spots as their actual band and allows them to populate the board even when filtered.
+
+### 7.2 The "DX/Tropo" Pulse
+- **Challenge**: Spot labels like "SOLID" or "STRONG" are HFcentric. VHF operators care about **Atmospheric Ducting (Tropo)**.
+- **Solution**: Enhanced the Prop-Pulse engine to detect VHF distances over **200 miles** and label them as **DX/Tropo**, signaling a potential opening for line-of-sight operators.
 
 ---
 
@@ -83,5 +94,5 @@ This document tracks the technical evolution of the **Spotter-PRO v2** applicati
 
 ---
 
-**Current Project State**: Stable for Field Use (Version 2.0 / SW v4).  
+**Current Project State**: Stable for Field Use (Version 2.2 / SW v8).  
 *Managed by the Arizona Repeater Association (W7ARA).*

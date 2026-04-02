@@ -48,10 +48,11 @@ Use the live console instantly in your browser (and select **"Add to Home Screen
 ## 📜 Documentation & Education
 Included in this repository as part of the W7ARA "AI-Assisted Build" educational initiative:
 - `build_history.md`: Full technical development log and implementation phases.
-- `session_walkthrough.md`: A 5-phase educational guide explaining the "Why" behind the technical architecture (Caching, Solar Data, Distance Fallbacks).
+- `session_walkthrough.md`: A 7-phase educational guide explaining the "Why" behind the technical architecture (Caching, Solar Data, Distance Fallbacks, Global DX Regional Mapping, and VHF/UHF propagation insights).
 
 ---
 
-*W7ARA Spotter-PRO is developed for the Arizona Repeater Association as a high-performance utility for the amateur radio community and as an educational case study in building powerful, AI-accelerated web tools for the shack.*
+**Project State**: Stable for Field Use (Version 2.2 / SW v8).  
+*Managed by the Arizona Repeater Association (W7ARA).*
 
 ---
