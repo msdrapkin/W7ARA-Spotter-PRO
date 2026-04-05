@@ -390,6 +390,75 @@
             .promo-body { font-size: 0.75rem; }
             .promo-footer { margin-top: 8px; }
         }
+
+        /* --- Modal Styles --- */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(8px);
+            z-index: 2100;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal-content {
+            background: #1c2128;
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            max-width: 600px;
+            width: 100%;
+            padding: 2rem;
+            position: relative;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+            animation: modalFadeIn 0.3s ease-out;
+        }
+        @keyframes modalFadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .modal-close {
+            position: absolute;
+            top: 1.5rem;
+            right: 1.5rem;
+            background: rgba(255,255,255,0.05);
+            border: none;
+            color: var(--text-main);
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-title { font-size: 1.5rem; font-weight: 800; color: var(--text-bright); margin-bottom: 1rem; }
+        .modal-body { font-size: 0.95rem; line-height: 1.6; color: var(--text-main); }
+        .modal-body p { margin-bottom: 1rem; }
+        .modal-body ul { margin-bottom: 1rem; padding-left: 1.5rem; }
+        .modal-body li { margin-bottom: 0.5rem; }
+        .modal-body b { color: var(--accent-sota); }
+        
+        .location-info-btn {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 0.8rem;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: 0.2s;
+        }
+        .location-info-btn:hover { background: rgba(255,255,255,0.07); border-color: #444c56; }
     </style>
 </head>
 <body>
@@ -500,6 +569,10 @@
             </div>
             <div class="promo-footer">Visit w7ara.net 📡 ↗</div>
         </a>
+
+        <button class="location-info-btn" onclick="toggleModal('location-modal')">
+            📍 Location Details & Disclaimer
+        </button>
     </aside>
 
     <section class="content">
@@ -510,7 +583,32 @@
     </section>
 </main>
 
+<div class="modal-overlay" id="location-modal" onclick="if(event.target === this) toggleModal('location-modal')">
+    <div class="modal-content">
+        <button class="modal-close" onclick="toggleModal('location-modal')">✕</button>
+        <div class="modal-title">Location Accuracy & Determination</div>
+        <div class="modal-body">
+            <p>W7ARA's <b>SPOTTER-PRO</b> uses several methods to provide relevant distance and bearing information for spots. Because amateur radio spotting networks (POTA and SOTA) do not always provide real-time GPS coordinates for every activator, our system uses a tiered logic approach to estimate locations:</p>
+            <ul>
+                <li><b>Explicit Metadata:</b> We prioritize GPS coordinates if provided directly by the spotting API (e.g. SOTA Summit database).</li>
+                <li><b>Comment Parsing:</b> If the activator includes a 4 or 6-character Grid Square in their comments (e.g., "FN31"), our engine parses and uses it to provide high-accuracy distance calculations.</li>
+                <li><b>Regional Centroids:</b> As a fallback, we use the geographic center of the activator's State, Province, or SOTA Association area (e.g., the center of Arizona for W7A).</li>
+            </ul>
+            <p><b>Why it might be inaccurate:</b><br>
+            When a regional fallback is used, the distance displayed estimates your path to the <i>center</i> of that region, not the specific park or summit. This can result in inaccuracies of 50-200 miles for local stations, and it may impact the "Prop-Pulse" propagation confidence score.</p>
+            <p><b>Our Goal:</b><br>
+            We aim to provide the most relevant data for situational awareness and propagation planning. If a spot's location feels significantly off, it is likely because the activator has not included a grid square or specific coordinates in their spot report!</p>
+        </div>
+    </div>
+</div>
+
 <script>
+function toggleModal(id) {
+    const modal = document.getElementById(id);
+    if (!modal) return;
+    modal.classList.toggle('active');
+}
+
 const state = {
     potaEnabled: true,
     sotaEnabled: true,
