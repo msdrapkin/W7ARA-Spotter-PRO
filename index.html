@@ -1247,6 +1247,7 @@ document.querySelectorAll('.sidebar input, .sidebar select').forEach(el => {
              localStorage.setItem('ara-spotter-grid', e.target.value);
              e.target.classList.remove('pulse-highlight');
         }
+        if (e.target.id === 'callsign') localStorage.setItem('ara-spotter-mycall', e.target.value);
         if (e.target.id === 'callsign-filter') localStorage.setItem('ara-spotter-callsign', e.target.value);
         if (e.target.id === 'dist-limit') localStorage.setItem('ara-spotter-dist', e.target.value);
         if (e.target.id === 'band-filter') localStorage.setItem('ara-spotter-band', e.target.value);
@@ -1379,6 +1380,9 @@ window.onload = async () => {
         // No grid set? Highlight the field and use fallback
         document.getElementById('grid').classList.add('pulse-highlight');
     }
+
+    const savedMyCall = localStorage.getItem('ara-spotter-mycall');
+    if (savedMyCall) document.getElementById('callsign').value = savedMyCall;
 
     const savedCallsign = localStorage.getItem('ara-spotter-callsign');
     if (savedCallsign) document.getElementById('callsign-filter').value = savedCallsign;
