@@ -605,9 +605,9 @@
             <button onclick="checkForUpdates()" style="background: none; border: 1px solid #30363d; color: #768390; font-size: 0.6rem; padding: 2px 8px; border-radius: 4px; cursor: pointer; opacity: 0.7;">
                 🔄 Check for Updates
             </button>
-            <div style="font-size: 0.65rem; color: #768390; text-align: center; opacity: 0.6;">
-                v15.0.0 // SPOTTER-PRO
-            </div>
+            <div style="font-size: 0.65rem; color: #444c56; font-family: monospace; letter-spacing: 0.05rem;" id="app-version">
+            v15.0.0 // SPOTTER-PRO
+        </div>
         </div>
     </aside>
 
@@ -894,15 +894,50 @@ async function fetchSpots() {
             d.forEach(s => {
                 const g = extractGrid(s.comments);
                 let c = g ? gridToCoords(g) : null;
-                if (!c && s.locationDesc) c = regionCenters[s.locationDesc.trim()];
-                allSpots.push({ id: `pota-${s.spotId}`, source: 'pota', activator: s.activator, ref: s.reference, freq: s.frequency, mode: s.mode, time: s.spotTime.replace(' ', 'T'), lat: c?c.lat:null, lon: c?c.lon:null, location: s.locationDesc, comments: s.comments });
+                
+                // PRIORITY 1: Precise GPS from API if available
+                let lat = s.latitude || (c ? c.lat : null);
+                let lon = s.longitude || (c ? c.lon : null);
+                
+                // PRIORITY 2: Fallback to region center if still null
+                if (lat === null && s.locationDesc) {
+                    const rc = regionCenters[s.locationDesc.trim()];
+                    if (rc) { lat = rc.lat; lon = rc.lon; }
+                }
+
+                allSpots.push({ 
+                    id: `pota-${s.spotId}`, 
+                    source: 'pota', 
+                    activator: s.activator, 
+                    name: s.name, 
+                    ref: s.reference, 
+                    freq: s.frequency, 
+                    mode: s.mode, 
+                    time: s.spotTime.replace(' ', 'T'), 
+                    lat: lat, 
+                    lon: lon, 
+                    location: s.locationDesc, 
+                    comments: s.comments 
+                });
             });
         }
         if (state.sotaEnabled) {
             const r = await fetch('https://api2.sota.org.uk/api/spots/100');
             const d = await r.json();
             d.forEach(s => {
-                allSpots.push({ id: `sota-${s.id}`, source: 'sota', activator: s.activatorCallsign, ref: (s.associationCode || '') + '/' + (s.summitCode || ''), freq: s.frequency, mode: s.mode, time: s.timeStamp, lat: null, lon: null, comments: s.comments });
+                allSpots.push({ 
+                    id: `sota-${s.id}`, 
+                    source: 'sota', 
+                    activator: s.activatorCallsign, 
+                    name: s.summitName || '',
+                    ref: (s.associationCode || '') + '/' + (s.summitCode || ''), 
+                    freq: s.frequency, 
+                    mode: s.mode, 
+                    time: s.timeStamp, 
+                    lat: null, 
+                    lon: null, 
+                    comments: s.comments 
+                });
             });
         }
 
@@ -992,7 +1027,7 @@ function renderSpots(spots) {
                     <a href="https://www.qrz.com/db/${s.activator}" target="_blank">${s.activator} 🔍</a>
                     <span class="prop-dot" title="${prop.label}" style="background:${prop.color}; width:8px; height:8px; border-radius:50%; display:inline-block; box-shadow: 0 0 6px ${prop.color};"></span>
                 </div>
-                <div style="font-size:0.75rem; opacity:0.8;">${s.ref}</div>
+                <div style="font-size:0.75rem; opacity:0.8;">${s.ref}${s.name ? ' - ' + s.name : ''}</div>
             </div>
             <div class="freq-info">
                 <div class="frequency">${s.freq}</div>
