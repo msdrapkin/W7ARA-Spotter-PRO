@@ -1163,7 +1163,7 @@ function renderSpots(spots) {
                 </div>
                 <div style="display:flex; gap:6px;">
                     <button class="action" style="padding:4px 8px; min-height:32px; background:#1c2128;" 
-                        onclick="window.open('${s.precise ? `https://maps.google.com/?q=${s.lat},${s.lon}` : `https://www.google.com/maps/search/${encodeURIComponent(s.name + ' ' + s.ref)}`}')">🗺️</button>
+                        onclick="window.open('${s.precise ? `https://maps.google.com/?q=${s.lat},${s.lon}` : `https://www.google.com/maps/search/${encodeURIComponent(s.name || s.ref)}`}')">🗺️</button>
                     <button class="action" onclick="copyVal('${s.freq}')" style="padding:4px 8px; min-height:32px;">📋</button>
                 </div>
             </div>
