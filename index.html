@@ -606,7 +606,7 @@
                 🔄 Check for Updates
             </button>
             <div style="font-size: 0.65rem; color: #444c56; font-family: monospace; letter-spacing: 0.05rem;" id="app-version">
-            v16.0.0 // SPOTTER-PRO
+            v17.0.0 // SPOTTER-PRO (SOTA PRECISION)
         </div>
         </div>
     </aside>
@@ -652,7 +652,8 @@ const state = {
     myCoords: null,
     knownSpots: new Set(),
     initialized: false,
-    filters: { dist: 5000, band: 'all', mode: 'all', callsign: '' }
+    filters: { dist: 5000, band: 'all', mode: 'all', callsign: '' },
+    summitCache: {} // Cache for SOTA peak GPS coordinates
 };
 
 const stateAlias = { 
@@ -699,6 +700,23 @@ function calculateBearing(c1, c2) {
     return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
 }
 
+async function fetchSotaSummit(assoc, summit) {
+    const key = `${assoc}/${summit}`;
+    if (state.summitCache[key]) return; // Already cached
+    
+    try {
+        const res = await fetch(`https://api2.sota.org.uk/api/summits/${assoc}/${summit}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.latitude && data.longitude) {
+            state.summitCache[key] = { lat: data.latitude, lon: data.longitude };
+            localStorage.setItem('ara-spotter-sota-cache', JSON.stringify(state.summitCache));
+            // Recalculate distances for the current spots now that we have precision
+            renderSpots(window.currentSpots || []); 
+        }
+    } catch(e) { console.warn("SOTA summit lookup failed", e); }
+}
+
 function extractGrid(str) {
     const match = str ? str.match(/[A-R]{2}[0-9]{2}[a-z]{2}/i) || str.match(/[A-R]{2}[0-9]{2}/i) : null;
     return match ? match[0] : null;
@@ -738,6 +756,9 @@ function resolveLocation(s) {
     if (s.lat) return { lat: s.lat, lon: s.lon };
     let c = null;
     if (s.source === 'sota') {
+        // Priority 1: Check the new SOTA Precision Cache
+        if (state.summitCache[s.ref]) return state.summitCache[s.ref];
+
         const assoc = s.ref ? s.ref.split('/')[0].toUpperCase() : null;
         if (assoc) {
             c = regionCenters[assoc] || regionCenters[assoc.substring(0,2)] || regionCenters[assoc.substring(0,1)];
@@ -926,11 +947,17 @@ async function fetchSpots() {
             const r = await fetch('https://api2.sota.org.uk/api/spots/100');
             const d = await r.json();
             d.forEach(s => {
+                // Extract summit name from details (e.g., "High Peak, 1114m" -> "High Peak")
+                let sName = s.summitName || '';
+                if (!sName && s.summitDetails) {
+                    sName = s.summitDetails.split(',')[0].trim();
+                }
+
                 allSpots.push({ 
                     id: `sota-${s.id}`, 
                     source: 'sota', 
                     activator: s.activatorCallsign, 
-                    name: s.summitName || '',
+                    name: sName,
                     ref: (s.associationCode || '') + '/' + (s.summitCode || ''), 
                     freq: s.frequency, 
                     mode: s.mode, 
@@ -939,6 +966,10 @@ async function fetchSpots() {
                     lon: null, 
                     comments: s.comments 
                 });
+                
+                // Trigger Background Lookup for Peak Precision
+                const [assoc, summit] = [s.associationCode, s.summitCode];
+                if (assoc && summit) fetchSotaSummit(assoc, summit);
             });
         }
 
@@ -1237,6 +1268,12 @@ window.onload = async () => {
 
     const savedMode = localStorage.getItem('ara-spotter-mode');
     if (savedMode) document.getElementById('mode-filter').value = savedMode;
+
+    const savedSotaCache = localStorage.getItem('ara-spotter-sota-cache');
+    if (savedSotaCache) {
+        try { state.summitCache = JSON.parse(savedSotaCache); } 
+        catch(e) { console.warn("Failed to load SOTA cache", e); }
+    }
     
     updateState(); // Sync internal state with loaded values
     await fetchSpots();
