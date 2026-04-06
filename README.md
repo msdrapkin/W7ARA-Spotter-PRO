@@ -52,7 +52,7 @@ Included in this repository as part of the W7ARA "AI-Assisted Build" educational
 
 ---
 
-**Project State**: Stable for Field Use (Version 2.2 / SW v8).  
+**Project State**: Production Ready (Version 15.0.0 / SW v15).  
 *Managed by the Arizona Repeater Association (W7ARA).*
 
 ---

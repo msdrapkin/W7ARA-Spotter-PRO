@@ -21,7 +21,7 @@ This document tracks the technical evolution of the **Spotter-PRO v2** applicati
 ## 🛰️ Phase 2: Data Integrity & Global DX
 **Objective**: Ensure the data is accurate and comprehensive for global operations.
 
-### 2.1 The "SOTA 20" Bottleneck
+### 2.1 The "SOTA 100" Update
 - **Challenge**: The SOTA API default limit of 20 caused "Spot Drowning"—one busy activator would hide everyone else.
 - **Solution**: Increased the SOTA fetch limit to **100 spots** and implemented **Smart Counters** in the header to show "Unique/Visible" activators.
 
@@ -40,46 +40,57 @@ This document tracks the technical evolution of the **Spotter-PRO v2** applicati
 ### 3.1 The "Solar Pulse" Strip
 - **Challenge**: Spotting someone is one thing; knowing if you can *hear* them depends on the ionosphere.
 - **Solution**: 
-    1. Integrated a live **Solar Bar** using the **HamQSL (NØNBH)** feed.
+    1. Integrated a live **Solar Bar** using the **HamQSL (N0NBH)** feed.
     2. Implemented **Color-Coded Status Dots** for the K-Index (Green = Stable, Red = Storm).
     3. Added **SFI (Solar Flux Index)** tracking to help users decide if the high bands (10m) are "open."
 
 ---
 
-## 📱 Phase 4: Mobile Compatibility (Android Focus)
-**Objective**: Fix silent data failures on mobile devices.
+## 📱 Phase 4: Mobile Compatibility (Android/iOS)
+**Objective**: Fix silent data failures and device-specific rendering issues.
 
 ### 4.1 The "Android Case-Sensitivity Trap"
 - **Challenge**: Android's `DOMParser` can be case-sensitive. Desktop Chrome found `<solarflux>`, but Android sometimes required `<SOLARFLUX>`. 
 - **Solution**: Implemented a **Case-Insensitive Tag Helper** that searches for both variations, ensuring stability across all mobile browsers.
 
-### 4.2 Cache Busting (SW v4)
+### 4.2 Cache Busting (SW Update Cycle)
 - **Challenge**: PWAs on phones are incredibly stubborn about keeping "Old Code."
-- **Solution**: Bumping the `CACHE_NAME` to **`v4`** forces the phone's browser to discard the old cache and pull in the latest solar logic and glossary updates on the next refresh.
+- **Solution**: Using a strictly incremented `CACHE_NAME` in the Service Worker and an explicit **Check for Updates** button in the UI to force the browser to discard the old cache.
 
 ---
 
----
+## 🛰️ Phase 5: Regional Sub-Mapping
+**Objective**: Resolve accurate distances for complex international regions.
 
-## 🛰️ Phase 6: Global DX & Regional Mapping
-**Objective**: Resolve accurate distances for international regions.
-
-### 6.1 The "Japan Call Area" Problem
+### 5.1 The "JA Call Area" Solution
 - **Challenge**: SOTA spots from Japan (e.g., `JA6/KG-095`) often mapped to a generic Tokyo center point, leading to inaccurate 400-mile errors across islands.
-- **Solution**: Implemented a **Regional Sub-Prefix Matcher** for the JA-series (JA1–JA9, JA0). The app now identifies the specific call area and maps to the correct regional center (e.g., Kyushu for JA6) before falling back to the country center.
+- **Solution**: Implemented a **Regional Sub-Prefix Matcher** for the JA-series (JA1–JA9, JA0). The app now identifies the specific call area (e.g., Kyushu for JA6) for correct distancing.
 
 ---
 
-## 📻 Phase 7: VHF/UHF Field Utility
+## 📻 Phase 6: VHF/UHF Field Utility
 **Objective**: Enable effective 2m/6m/70cm hunting in the field.
 
-### 7.1 The "MHz Multiplier" Fix
-- **Challenge**: Spots on 144 MHz or 440 MHz were being misidentified as "0.144 kHz" due to legacy frequency scaling, causing them to disappear when filters were applied.
-- **Solution**: Shifted the auto-scaling threshold to **1000 MHz**. This correctly identifies VHF/UHF spots as their actual band and allows them to populate the board even when filtered.
+### 6.1 The "MHz Multiplier" Fix
+- **Challenge**: Spots on 144 MHz or 440 MHz were being misidentified as "0.144 kHz" due to legacy frequency scaling.
+- **Solution**: Shifted the auto-scaling threshold to **1000 MHz**, correctly identifying VHF/UHF spots and allowing them to populate the board correctly.
 
-### 7.2 The "DX/Tropo" Pulse
-- **Challenge**: Spot labels like "SOLID" or "STRONG" are HFcentric. VHF operators care about **Atmospheric Ducting (Tropo)**.
-- **Solution**: Enhanced the Prop-Pulse engine to detect VHF distances over **200 miles** and label them as **DX/Tropo**, signaling a potential opening for line-of-sight operators.
+---
+
+## 📡 Phase 7: Mobile UX & Persistence (v11 - v15)
+**Objective**: Finalize the app for professional field deployment and resolve state loss.
+
+### 7.1 The "Touch Fatality" Fix
+- **Challenge**: Sidebar buttons were too close together on phone screens, causing accidental clicks.
+- **Solution**: Increased the vertical gap between sidebar sections and expanded button padding for clear touch targets.
+
+### 7.2 The "PWA Ghosting" Problem
+- **Challenge**: iOS Safari PWAs are notorious for staying on "Old Versions."
+- **Solution**: Added a **Manual Update Engine** in the sidebar. The `🔄 Check for Updates` button explicitly forces the browser to pull the latest version, bypassing the standard background update cycle.
+
+### 7.3 Real-Time State Persistence
+- **Challenge**: After an iPad reboot, the user's grid square and filters would often disappear.
+- **Solution**: Moved all settings (Grid, Callsign, Distance, Band, Mode) to the **`input` event**. Now, every keystroke is instantly committed to `localStorage`, making the app "crash-proof" and "reboot-proof."
 
 ---
 
@@ -94,5 +105,5 @@ This document tracks the technical evolution of the **Spotter-PRO v2** applicati
 
 ---
 
-**Current Project State**: Stable for Field Use (Version 2.2 / SW v8).  
+**Current Project State**: Production Ready (Version 15.0.0 / SW v15).  
 *Managed by the Arizona Repeater Association (W7ARA).*

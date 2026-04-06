@@ -1,7 +1,7 @@
 # SPOTTER-PRO: Full Build History & Development Log
 
 **Project:** SPOTTER-PRO Real-Time POTA/SOTA Hunting Console  
-**Date:** March 2026  
+**Date:** March - April 2026  
 **Developer:** Antigravity (AI Coding Assistant)  
 **User:** mdrapkin  
 
@@ -22,9 +22,7 @@ To develop a high-performance, self-contained, real-time web application for ama
 
 ---
 
-## 🧩 Phase 2: Feature Refinement (Chronological Requests)
-Based on the direct prompts and iterative feedback from the user, the following enhancements were implemented:
-
+## 🧩 Phase 2: Feature Refinement
 1.  **Persistence & Callsign Integration**: Added the ability for users to save their own callsign and grid square permanently across browser sessions.
 2.  **Geolocation (Finder)**: Integrated the Browser Geolocation API via a **🧭 FIND ME** button to automatically populate 6-digit grid squares.
 3.  **Advanced Filtering Engine**:
@@ -38,32 +36,35 @@ Based on the direct prompts and iterative feedback from the user, the following 
 
 ---
 
-## 🔊 Phase 3: Audio Notification System
-To support hands-off monitoring, a custom **Web Audio API** engine was built to synthesize Morse Code tones (700Hz):
-*   **POTA Alert**: Plays `. -- .` (**P**) for every new POTA spot detected.
-*   **SOTA Alert**: Plays `. . .` (**S**) for every new SOTA spot detected.
-*   **Smart Alerts**: Only new, unique spot IDs trigger the audio, preventing redundant alerts on every poll.
+## 🔊 Phase 3: Audio & Solar Integration
+*   **Audio Alerts**: Custom **Web Audio API** engine synthesizing Morse Code (.--. for POTA, ... for SOTA) for new spots.
+*   **Solar Bar**: Integration of **HamQSL (N0NBH)** live solar flux and K-index data with color-coded status indicators.
+*   **Prop-Pulse Engine (v1.0)**: Initial distance-based propagation heuristics.
 
 ---
 
-## 📐 Design Philosophy
-*   **Theme**: Sleek, high-contrast Dark Mode (GitHub-inspired palette).
-*   **Responsiveness**: Grid-based layout that scales from high-resolution desktops down to tablets.
-*   **Efficiency**: Single-file HTML/CSS/JS architecture for instant load times and zero dependency bloat.
+## 🎨 Phase 4: Branding & Mobile Optimization
+*   **Branding**: Integration of official **W7ARA** assets and color palette (#006DAA).
+*   **PWA Architecture**: Implemented `manifest.json` and a Service Worker (`sw.js`) for offline capabilities and Home Screen installation.
+*   **Safe Areas**: Added CSS safe-area-insets to prevent the iOS/Android navigation bars from obscuring spot data.
 
 ---
 
-## 🎨 Phase 4: Branding & Provenance
-To ensure the console's identity is fully integrated with the **Arizona Repeater Association (W7ARA)**, the following final refinements were made:
-1.  **Official Asset Integration**: Embedded the circular W7ARA logo and the diamond favicon from `w7ara.org`.
-2.  **Color Synchronization**: Aligned the dashboard palette with the official club colors (**#006DAA**).
-3.  **Intellectual Provenance**: Added formal internal code comments crediting **WB2SEF** with the initial design and foundational implementation.
-4.  **Consolidated Record**: Generated a 13-prompt educational transcript (`PROMPT-RESPONSE-HISTORY.txt`) for use in training and club presentations.
+## 🛰️ Phase 5: Global DX & Desktop-to-Mobile Parity (v11-v15)
+1.  **Global DX Expansion**: Added a deep-mapping table for international DX entities (**China, Japan, South East Asia, South America, etc.**) to ensure distances and propagation are resolved even without specific grid squares.
+2.  **Mobile UX Overhaul**: 
+    *   Optimized the **Header & Sidebar** for touch-friendliness (increased padding/target sizes).
+    *   Implemented a **Location Accuracy Modal** to educate users on fallback logic.
+    *   Added a persistent **Version Label** for troubleshooting.
+3.  **Manual Update Engine**: Added a `🔄 Check for Updates` button to the sidebar, allowing PWA users (especially on iOS/Safari) to manually trigger a Service Worker refresh and bypass stale caches.
+4.  **Real-Time Persistence Engine**: 
+    *   Replaced the legacy `change` event listeners with the high-frequency `input` event.
+    *   Expanded persistence to include **Callsign, Distance Limit, Band, and Mode** filters, ensuring a seamless user experience across reboots.
 
 ---
 
 ## 📂 Final File State
-The current build resides in: `c:\Users\mdrapkin\Documents\AppDev\Projects\ARA Meeting\spots.html`
+The current build resides in: `index.html` (the primary application file).
 
 ---
-*End of Build Log*
+*End of Build Log (v15.0.0)*
