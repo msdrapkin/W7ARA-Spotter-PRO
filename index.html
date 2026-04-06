@@ -601,8 +601,13 @@
             📍 Location Details & Disclaimer
         </button>
 
-        <div style="font-size: 0.65rem; color: #768390; text-align: center; margin-top: -0.5rem; opacity: 0.6;">
-            v13.0.0 // SPOTTER-PRO
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 0.25rem; margin-top: -0.25rem;">
+            <button onclick="checkForUpdates()" style="background: none; border: 1px solid #30363d; color: #768390; font-size: 0.6rem; padding: 2px 8px; border-radius: 4px; cursor: pointer; opacity: 0.7;">
+                🔄 Check for Updates
+            </button>
+            <div style="font-size: 0.65rem; color: #768390; text-align: center; opacity: 0.6;">
+                v14.0.0 // SPOTTER-PRO
+            </div>
         </div>
     </aside>
 
@@ -1197,6 +1202,20 @@ if ('serviceWorker' in navigator) {
             .catch(err => console.log('Service Worker failed', err));
     });
 }
+    function checkForUpdates() {
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistration().then(registration => {
+                if (registration) {
+                    registration.update().then(() => {
+                        console.log("Service Worker checking for updates...");
+                        alert("Checking for latest version... If an update was found, the app will refresh shortly or on next relaunch!");
+                    });
+                }
+            });
+        } else {
+            alert("This device doesn't support automatic updates. Please refresh your browser manually.");
+        }
+    }
 </script>
 </body>
 </html>
