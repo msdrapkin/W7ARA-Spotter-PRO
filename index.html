@@ -606,7 +606,7 @@
                 🔄 Check for Updates
             </button>
             <div style="font-size: 0.65rem; color: #444c56; font-family: monospace; letter-spacing: 0.05rem;" id="app-version">
-            v15.0.0 // SPOTTER-PRO
+            v16.0.0 // SPOTTER-PRO
         </div>
         </div>
     </aside>
@@ -624,16 +624,17 @@
         <button class="modal-close" onclick="toggleModal('location-modal')">✕</button>
         <div class="modal-title">Location Accuracy & Determination</div>
         <div class="modal-body">
-            <p>W7ARA's <b>SPOTTER-PRO</b> uses several methods to provide relevant distance and bearing information for spots. Because amateur radio spotting networks (POTA and SOTA) do not always provide real-time GPS coordinates for every activator, our system uses a tiered logic approach to estimate locations:</p>
+            <p>W7ARA's <b>SPOTTER-PRO</b> uses a multi-layered location engine to determine the distance and bearing to a remote activator. Because amateur radio spotting networks (POTA and SOTA) vary in the detail they provide, our system uses a **Quad-Tier Logic** approach:</p>
             <ul>
-                <li><b>Explicit Metadata:</b> We prioritize GPS coordinates if provided directly by the spotting API (e.g. SOTA Summit database).</li>
-                <li><b>Comment Parsing:</b> If the activator includes a 4 or 6-character Grid Square in their comments (e.g., "FN31"), our engine parses and uses it to provide high-accuracy distance calculations.</li>
-                <li><b>Regional Centroids:</b> As a fallback, we use the geographic center of the activator's State, Province, or SOTA Association area (e.g., the center of Arizona for W7A).</li>
+                <li><b>1. Grid Scraper (High Accuracy):</b> We scan the spot's comments for 4 or 6-character Maidenhead Grid Squares (e.g., "DM33" or "FN31sv"). If found, this is used as the gold standard for your distance calculation.</li>
+                <li><b>2. API Metadata (High Accuracy):</b> We now extract precise GPS coordinates directly from the POTA and SOTA databases for most spots. This maps you directly to the specific park or summit.</li>
+                <li><b>3. Regional Centroids (Mid Accuracy):</b> If no specific GPS is available, we use the geographic center of the activator's State, Province, or SOTA Association (e.g., the center of Arizona for W7A).</li>
+                <li><b>4. International DX Prefix (Fallback):</b> For overseas DX, we utilize the activator's callsign prefix to estimate a central coordinate for their country of origin.</li>
             </ul>
-            <p><b>Why it might be inaccurate:</b><br>
-            When a regional fallback is used, the distance displayed estimates your path to the <i>center</i> of that region, not the specific park or summit. This can result in inaccuracies of 50-200 miles for local stations, and it may impact the "Prop-Pulse" propagation confidence score.</p>
+            <p><b>Park & Summit Names:</b><br>
+            To improve situational awareness, we now decode and display the human-readable name of the park or summit (e.g., <i>"K-0683 - Grand Canyon"</i>) directly in the spot card.</p>
             <p><b>Our Goal:</b><br>
-            We aim to provide the most relevant data for situational awareness and propagation planning. If a spot's location feels significantly off, it is likely because the activator has not included a grid square or specific coordinates in their spot report!</p>
+            We aim to provide the most relevant data for propagation planning. If a spot's distance looks slightly rounded (e.g. exactly 142 miles), the app is likely using a <b>Regional Centroid</b> fallback. You can verify the accuracy by checking if a map icon 🗺️ appears, signifying a coordinate-based location.</p>
         </div>
     </div>
 </div>

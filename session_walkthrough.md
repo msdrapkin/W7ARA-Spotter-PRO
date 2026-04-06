@@ -105,5 +105,24 @@ This document tracks the technical evolution of the **Spotter-PRO v2** applicati
 
 ---
 
+## 🛰️ Phase 8: Park & Summit Precision
+**Objective**: Transition from generic regional centers to precise GPS-level spotting.
+
+### 8.1 The "Park Name" Integration (v15)
+- **Challenge**: Spotting IDs like `K-0683` alone weren't informative enough for field operators.
+- **Solution**: Updated the POTA and SOTA fetch engines to capture the human-readable **Park and Summit names**. These are now displayed alongside the Reference ID (e.g., `K-0683 - Grand Canyon`).
+
+### 8.2 API GPS Overrides
+- **Challenge**: The "Center of Arizona" fallback for POTA spots was off by hundreds of miles for large states.
+- **Solution**: 
+    1.  Enabled direct extraction of `latitude` and `longitude` fields from the **POTA live spot API**.
+    2.  Established a **Location Priority Hierarchy**:
+        - **Highest**: Grid Square from comments (Manual Entry).
+        - **High**: GPS Data from the POTA database (Automatic).
+        - **Mid**: State/Region fallback center.
+        - **Low**: Country-level fallback (for DX).
+
+---
+
 **Current Project State**: Production Ready (Version 15.0.0 / SW v15).  
 *Managed by the Arizona Repeater Association (W7ARA).*
