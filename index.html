@@ -29,6 +29,18 @@
             --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
         }
 
+        .pulse-highlight {
+            border-color: var(--accent-brand) !important;
+            box-shadow: 0 0 0 0 rgba(0, 109, 170, 0.7);
+            animation: pulse-border 2s infinite;
+        }
+
+        @keyframes pulse-border {
+            0% { box-shadow: 0 0 0 0 rgba(0, 109, 170, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(0, 109, 170, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(0, 109, 170, 0); }
+        }
+
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
@@ -558,9 +570,24 @@
             <label>Mode</label>
             <select id="mode-filter">
                 <option value="all">All Modes</option>
-                <option value="SSB">SSB / Phone</option>
+                <option value="SSB">SSB/Phone</option>
                 <option value="CW">CW</option>
-                <option value="DIGITAL">Digital</option>
+                <option value="DIGITAL">Digital (FT8/Data)</option>
+            </select>
+
+            <label>Min SOTA Value</label>
+            <select id="min-points-filter">
+                <option value="0">All Summits</option>
+                <option value="4">4+ Points</option>
+                <option value="6">6+ Points</option>
+                <option value="10">10 Points Only</option>
+            </select>
+
+            <label>Sort By</label>
+            <select id="sort-by-filter">
+                <option value="time">Newest Spot</option>
+                <option value="distance">Closest to Me</option>
+                <option value="value">Highest Points</option>
             </select>
         </div>
 
@@ -606,8 +633,8 @@
                 🔄 Check for Updates
             </button>
             <div style="font-size: 0.65rem; color: #444c56; font-family: monospace; letter-spacing: 0.05rem;" id="app-version">
-            v17.0.0 // SPOTTER-PRO (SOTA PRECISION)
-        </div>
+                v1.0.0 // SPOTTER-PRO (GA RELEASE)
+            </div>
         </div>
     </aside>
 
@@ -631,10 +658,10 @@
                 <li><b>3. Regional Centroids (Mid Accuracy):</b> If no specific GPS is available, we use the geographic center of the activator's State, Province, or SOTA Association (e.g., the center of Arizona for W7A).</li>
                 <li><b>4. International DX Prefix (Fallback):</b> For overseas DX, we utilize the activator's callsign prefix to estimate a central coordinate for their country of origin.</li>
             </ul>
-            <p><b>Park & Summit Names:</b><br>
-            To improve situational awareness, we now decode and display the human-readable name of the park or summit (e.g., <i>"K-0683 - Grand Canyon"</i>) directly in the spot card.</p>
+            <p><b>Contact Value tracking:</b><br>
+            For SOTA hunters, we now extract and display the <b>Summit Point Value (🏆)</b> for each peak. POTA contacts are tracked as single credits. This helps you prioritize high-value DX and rare summits in the field.</p>
             <p><b>Our Goal:</b><br>
-            We aim to provide the most relevant data for propagation planning. If a spot's distance looks slightly rounded (e.g. exactly 142 miles), the app is likely using a <b>Regional Centroid</b> fallback. You can verify the accuracy by checking if a map icon 🗺️ appears, signifying a coordinate-based location.</p>
+            We aim to provide the most relevant data for propagation planning and scoring. Happy hunting!</p>
         </div>
     </div>
 </div>
@@ -652,8 +679,15 @@ const state = {
     myCoords: { lat: 33.4484, lon: -112.0740 }, // Default to Phoenix (DM33) until user sets grid
     knownSpots: new Set(),
     initialized: false,
-    filters: { dist: 5000, band: 'all', mode: 'all', callsign: '' },
-    summitCache: {} // Cache for SOTA peak GPS coordinates
+    filters: { 
+        dist: 5000, 
+        band: 'all', 
+        mode: 'all', 
+        callsign: '',
+        sortBy: 'time',
+        minSotaPoints: 0
+    },
+    summitCache: {} 
 };
 
 const stateAlias = { 
@@ -702,18 +736,26 @@ function calculateBearing(c1, c2) {
 
 async function fetchSotaSummit(assoc, summit) {
     const key = `${assoc}/${summit}`;
-    if (state.summitCache[key]) return; // Already cached
+    // Force re-fetch if cache exists but is missing point data (v21 legacy fix)
+    if (state.summitCache[key] && state.summitCache[key].points !== undefined) return;
     
     try {
         const res = await fetch(`https://api2.sota.org.uk/api/summits/${assoc}/${summit}`);
         if (!res.ok) return;
         const data = await res.json();
-        if (data.latitude && data.longitude) {
-            state.summitCache[key] = { lat: data.latitude, lon: data.longitude };
-            localStorage.setItem('ara-spotter-sota-cache', JSON.stringify(state.summitCache));
-            // Recalculate distances for the current spots now that we have precision
-            renderSpots(window.currentSpots || []); 
-        }
+        
+        // Cache whatever we got (points are the priority for the badge)
+        state.summitCache[key] = {
+            lat: data.latitude || null,
+            lon: data.longitude || null,
+            points: data.points || 0,
+            bonus: data.bonusPoints || 0,
+            name: data.name || null
+        };
+        localStorage.setItem('ara-spotter-sota-cache', JSON.stringify(state.summitCache));
+        
+        // Refresh the UI to show the new points
+        renderSpots(window.currentSpots || []); 
     } catch(e) { console.warn("SOTA summit lookup failed", e); }
 }
 
@@ -753,11 +795,15 @@ function normalizeBand(b) {
 }
 
 function resolveLocation(s) {
-    if (s.lat) return { lat: s.lat, lon: s.lon };
+    if (s.lat && s.precise !== false) return { lat: s.lat, lon: s.lon, precise: true };
     let c = null;
+    let precise = false;
+
     if (s.source === 'sota') {
         // Priority 1: Check the new SOTA Precision Cache
-        if (state.summitCache[s.ref]) return state.summitCache[s.ref];
+        if (state.summitCache[s.ref]) {
+            return { ...state.summitCache[s.ref], precise: true };
+        }
 
         const assoc = s.ref ? s.ref.split('/')[0].toUpperCase() : null;
         if (assoc) {
@@ -779,7 +825,8 @@ function resolveLocation(s) {
         const p = s.activator.toUpperCase();
         c = regionCenters[p.substring(0,3)] || regionCenters[p.substring(0,2)] || regionCenters[p.substring(0,1)];
     }
-    return c;
+    
+    return c ? { ...c, precise: false } : null;
 }
 
 const regionCenters = {
@@ -938,6 +985,7 @@ async function fetchSpots() {
                     time: s.spotTime.replace(' ', 'T'), 
                     lat: lat, 
                     lon: lon, 
+                    precise: (s.latitude !== null || c !== null),
                     location: s.locationDesc, 
                     comments: s.comments 
                 });
@@ -988,10 +1036,20 @@ function renderSpots(spots) {
     
     // First pass: calculate distances/bearings and normalize data for EVERY spot
     spots.forEach(s => { 
+        // Extract Points/Name from Cache if available (always do this, even if GPS hasn't resolved)
+        if (s.source === 'sota' && state.summitCache[s.ref]) {
+            const cached = state.summitCache[s.ref];
+            s.points = cached.points;
+            s.bonus = cached.bonus || 0;
+            if (!s.name && cached.name) s.name = cached.name;
+        }
+
         const loc = resolveLocation(s);
         if (loc) {
             s.lat = loc.lat;
             s.lon = loc.lon;
+            s.precise = loc.precise;
+
             if (state.myCoords) {
                 s.distance = calculateDistance(state.myCoords, loc);
                 s.bearing = calculateBearing(state.myCoords, loc);
@@ -1017,8 +1075,17 @@ function renderSpots(spots) {
             const m = s.mode.toUpperCase();
             if (state.filters.mode === 'SSB' && !m.includes('SSB') && !m.includes('PHONE') && !m.includes('FM')) return false;
             if (state.filters.mode === 'CW' && m !== 'CW') return false;
-            if (state.filters.mode === 'DIGITAL' && m !== 'FT8' && m !== 'FT4' && m !== 'JS8' && !m.includes('DIGITAL')) return false;
+            if (state.filters.mode === 'DIGITAL' && 
+                m !== 'FT8' && m !== 'FT4' && m !== 'JS8' && 
+                !m.includes('DIGITAL') && !m.includes('DATA') && !m.includes('MFSK')) return false;
         }
+
+        // SOTA-specific point filter
+        if (s.source === 'sota' && state.filters.minSotaPoints > 0) {
+            const val = (s.points || 0) + (s.bonus || 0);
+            if (val < state.filters.minSotaPoints) return false;
+        }
+
         return true;
     });
 
@@ -1027,8 +1094,19 @@ function renderSpots(spots) {
     const uniqueSpots = [];
     const seenKeys = new Set();
     
-    // Sort spots by time (newest first)
-    filteredAll.sort((a, b) => new Date(b.time) - new Date(a.time));
+    // Sort spots based on user preference
+    if (state.filters.sortBy === 'distance') {
+        filteredAll.sort((a, b) => (a.distance || 999999) - (b.distance || 999999));
+    } else if (state.filters.sortBy === 'value') {
+        filteredAll.sort((a, b) => {
+            const valA = (a.points || 0) + (a.bonus || 0);
+            const valB = (b.points || 0) + (b.bonus || 0);
+            if (valA !== valB) return valB - valA;
+            return new Date(b.time) - new Date(a.time); // Tie-break with time
+        });
+    } else {
+        filteredAll.sort((a, b) => new Date(b.time) - new Date(a.time));
+    }
 
     filteredAll.forEach(s => {
         const key = `${s.activator.toUpperCase()}-${Math.round(s.freq)}-${s.mode.toUpperCase()}`;
@@ -1055,10 +1133,11 @@ function renderSpots(spots) {
         
         const card = document.createElement('div');
         card.className = `spot-card ${isNew ? 'new' : ''}`;
+        card.dataset.id = s.id; // Added to allow background updates
         card.innerHTML = `
             <div class="spot-source source-${s.source}">${s.source}</div>
             <div class="spot-main">
-                <div class="activator" style="display:flex; align-items:center gap:8px;">
+                <div class="activator" style="display:flex; align-items:center; gap:8px;">
                     <a href="https://www.qrz.com/db/${s.activator}" target="_blank">${s.activator} 🔍</a>
                     <span class="prop-dot" title="${prop.label}" style="background:${prop.color}; width:8px; height:8px; border-radius:50%; display:inline-block; box-shadow: 0 0 6px ${prop.color};"></span>
                 </div>
@@ -1066,7 +1145,13 @@ function renderSpots(spots) {
             </div>
             <div class="freq-info">
                 <div class="frequency">${s.freq}</div>
-                <div class="mode">${s.mode}</div>
+                <div style="display:flex; flex-direction:column; align-items:flex-end;">
+                    <div class="mode">${s.mode}</div>
+                    <div class="value-container" style="margin-top:4px;">
+                        ${s.source === 'sota' ? `<div class="sota-val" style="font-size:0.7rem; font-weight:800; color:#ff9800; background:rgba(255,152,0,0.1); padding:2px 6px; border-radius:4px; display:${(s.points !== undefined) ? 'block' : 'none'};">🏆 ${(s.points || 0) + (s.bonus || 0)} PTS</div>` : ''}
+                        ${s.source === 'pota' ? '<div style="font-size:0.65rem; font-weight:700; color:#8b949e;">1 CREDIT</div>' : ''}
+                    </div>
+                </div>
             </div>
             <div class="metadata">
                 <div style="display:flex; align-items:center; gap:4px;">
@@ -1074,7 +1159,8 @@ function renderSpots(spots) {
                    <span style="font-size:0.65rem; color:${prop.color}; font-weight:bold;">${prop.label.toUpperCase()}</span>
                 </div>
                 <div style="display:flex; gap:6px;">
-                    ${s.lat ? `<button class="action" style="padding:4px 8px; min-height:32px; background:#1c2128;" onclick="window.open('https://maps.google.com/?q=${s.lat},${s.lon}')">🗺️</button>` : ''}
+                    <button class="action" style="padding:4px 8px; min-height:32px; background:#1c2128;" 
+                        onclick="window.open('${s.precise ? `https://maps.google.com/?q=${s.lat},${s.lon}` : `https://www.google.com/maps/search/${encodeURIComponent(s.name + ' ' + s.ref)}`}')">🗺️</button>
                     <button class="action" onclick="copyVal('${s.freq}')" style="padding:4px 8px; min-height:32px;">📋</button>
                 </div>
             </div>
@@ -1144,6 +1230,8 @@ function updateState() {
     state.filters.dist = parseInt(document.getElementById('dist-limit').value) || 5000;
     state.filters.band = document.getElementById('band-filter').value;
     state.filters.mode = document.getElementById('mode-filter').value;
+    state.filters.minSotaPoints = parseInt(document.getElementById('min-points-filter').value) || 0;
+    state.filters.sortBy = document.getElementById('sort-by-filter').value;
     renderSpots(window.currentSpots || []);
 }
 
@@ -1151,11 +1239,16 @@ document.querySelectorAll('.sidebar input, .sidebar select').forEach(el => {
     el.addEventListener('input', (e) => {
         updateState();
         // Persist all settings on every change
-        if (e.target.id === 'grid') localStorage.setItem('ara-spotter-grid', e.target.value);
+        if (e.target.id === 'grid') {
+             localStorage.setItem('ara-spotter-grid', e.target.value);
+             e.target.classList.remove('pulse-highlight');
+        }
         if (e.target.id === 'callsign-filter') localStorage.setItem('ara-spotter-callsign', e.target.value);
         if (e.target.id === 'dist-limit') localStorage.setItem('ara-spotter-dist', e.target.value);
         if (e.target.id === 'band-filter') localStorage.setItem('ara-spotter-band', e.target.value);
         if (e.target.id === 'mode-filter') localStorage.setItem('ara-spotter-mode', e.target.value);
+        if (e.target.id === 'min-points-filter') localStorage.setItem('ara-spotter-min-pts', e.target.value);
+        if (e.target.id === 'sort-by-filter') localStorage.setItem('ara-spotter-sort', e.target.value);
     });
 });
 
@@ -1188,7 +1281,10 @@ function useGPS() {
         const char3 = Math.floor(((lon + 180) % 20) / 2).toString();
         const char4 = Math.floor((lat + 90) % 10).toString();
         const grid = char1 + char2 + char3 + char4;
-        document.getElementById('grid').value = grid;
+        const gridEl = document.getElementById('grid');
+        gridEl.value = grid;
+        gridEl.classList.remove('pulse-highlight');
+        localStorage.setItem('ara-spotter-grid', grid);
         updateState();
     });
 }
@@ -1258,6 +1354,9 @@ window.onload = async () => {
     if (savedGrid) {
         document.getElementById('grid').value = savedGrid;
         state.myCoords = gridToCoords(savedGrid);
+    } else {
+        // No grid set? Highlight the field and use fallback
+        document.getElementById('grid').classList.add('pulse-highlight');
     }
 
     const savedCallsign = localStorage.getItem('ara-spotter-callsign');
@@ -1271,6 +1370,12 @@ window.onload = async () => {
 
     const savedMode = localStorage.getItem('ara-spotter-mode');
     if (savedMode) document.getElementById('mode-filter').value = savedMode;
+
+    const savedMinPts = localStorage.getItem('ara-spotter-min-pts');
+    if (savedMinPts) document.getElementById('min-points-filter').value = savedMinPts;
+
+    const savedSort = localStorage.getItem('ara-spotter-sort');
+    if (savedSort) document.getElementById('sort-by-filter').value = savedSort;
 
     const savedSotaCache = localStorage.getItem('ara-spotter-sota-cache');
     if (savedSotaCache) {
