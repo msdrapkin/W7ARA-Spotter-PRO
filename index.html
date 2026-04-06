@@ -865,8 +865,8 @@ const regionCenters = {
     'OM': {lat: 48.66, lon: 19.69}, 'OK': {lat: 49.81, lon: 15.47}, 'HA': {lat: 47.16, lon: 19.50},
     'YO': {lat: 45.94, lon: 24.96}, 'CT': {lat: 39.39, lon: -8.22}, 'LA': {lat: 60.47, lon: 8.46},
     'SM': {lat: 60.12, lon: 18.64}, 'LX': {lat: 49.81, lon: 6.12}, 'PA': {lat: 52.13, lon: 5.29},
-    'SV': {lat: 39.07, lon: 21.82}, 'YU': {lat: 44.01, lon: 21.00}, 'E7': {lat: 43.91, lon: 17.67},
-    '9A': {lat: 45.10, lon: 15.20},
+    'SV': {lat: 39.07, lon: 21.82}, '9A': {lat: 45.10, lon: 15.20},
+    'RS': {lat: 44.01, lon: 21.00}, 'YU': {lat: 44.01, lon: 21.00}, 'YT': {lat: 44.01, lon: 21.00},
     'VK1': {lat: -35.28, lon: 149.13}, 'VK2': {lat: -33.86, lon: 151.20},
     'VK3': {lat: -37.81, lon: 144.96}, 'VK4': {lat: -27.46, lon: 153.02}, 'VK5': {lat: -34.92, lon: 138.60},
     'VK6': {lat: -31.95, lon: 115.86}, 'VK7': {lat: -42.88, lon: 147.32}, 'VK8': {lat: -12.46, lon: 130.84},
@@ -1190,6 +1190,7 @@ function getPropInsight(s) {
 
     // Middle Bands: 17m, 20m (The Workhorses)
     if (['17m', '20m'].includes(band)) {
+        if (!d) return { color: '#768390', label: 'Solid?' };
         if (d > 1000) return { color: '#4CAF50', label: 'Solid' }; // Good skip
         if (d < 400) return { color: '#FF9800', label: 'Skip?' };  // Likely skipping over you
         return { color: '#4CAF50', label: 'Strong' };
@@ -1291,48 +1292,65 @@ function useGPS() {
 
 // --- Solar & Countdown ---
 async function fetchSolarData() {
-    try {
-        // Using a CORS proxy to fetch the HamQSL XML feed reliably in the browser
-        const targetUrl = encodeURIComponent('https://www.hamqsl.com/solarxml.php');
-        const res = await fetch(`https://api.allorigins.win/raw?url=${targetUrl}`);
-        if (!res.ok) throw new Error("Proxy fetch failed");
+    const solarUrl = 'https://www.hamqsl.com/solarxml.php';
+    const proxies = [
+        `https://corsproxy.io/?${encodeURIComponent(solarUrl)}`,
+        `https://api.codetabs.com/v1/proxy?quest=${solarUrl}`,
+        `https://api.allorigins.win/raw?url=${encodeURIComponent(solarUrl)}`
+    ];
 
-        const text = await res.text();
-        const parser = new DOMParser();
-        const xml = parser.parseFromString(text, "text/xml");
-        
-        // Android/Mobile DOMParser can be very strict or have diff casing than desktop
-        const getTag = (x, tag) => {
-            const el = x.getElementsByTagName(tag)[0] || 
-                       x.getElementsByTagName(tag.toUpperCase())[0] ||
-                       x.querySelector(tag);
-            return el?.textContent || '--';
-        };
+    let success = false;
+    for (const proxyUrl of proxies) {
+        try {
+            console.log(`Trying Solar proxy: ${proxyUrl.split('?')[0]}`);
+            const res = await fetch(proxyUrl);
+            if (!res.ok) continue;
 
-        const sfi = getTag(xml, 'solarflux');
-        const kindex = getTag(xml, 'kindex');
-        const aindex = getTag(xml, 'aindex');
+            let text = await res.text();
+            if (!text || text.length < 100) continue; 
+            
+            if (text.trim().startsWith('{"')) {
+                try { const json = JSON.parse(text); text = json.contents || text; } catch(e) {}
+            }
 
-        const sfiEl = document.getElementById('solar-sfi');
-        const kEl = document.getElementById('solar-k');
-        const aEl = document.getElementById('solar-a');
-        const dot = document.getElementById('solar-k-dot');
+            const parser = new DOMParser();
+            const xml = parser.parseFromString(text, "text/xml");
+            
+            const getT = (t) => xml.getElementsByTagName(t)[0]?.textContent || 
+                               xml.getElementsByTagName(t.toUpperCase())[0]?.textContent || '--';
 
-        if (sfiEl) sfiEl.textContent = sfi;
-        if (kEl) kEl.textContent = kindex;
-        if (aEl) aEl.textContent = aindex;
+            const sfi = getT('solarflux');
+            const k = getT('kindex');
+            const a = getT('aindex');
 
-        if (dot) {
-            const kVal = parseInt(kindex);
-            dot.className = 'solar-dot';
-            if (kVal <= 2) dot.classList.add('green');
-            else if (kVal <= 4) dot.classList.add('yellow');
-            else if (kVal > 4) dot.classList.add('red');
+            if (sfi !== '--') {
+                document.getElementById('solar-sfi').textContent = sfi;
+                document.getElementById('solar-k').textContent = k;
+                document.getElementById('solar-a').textContent = a;
+                
+                const dot = document.getElementById('solar-k-dot');
+                if (dot) {
+                    const kVal = parseInt(k);
+                    dot.className = 'solar-dot';
+                    if (kVal <= 2) dot.classList.add('green');
+                    else if (kVal <= 4) dot.classList.add('yellow');
+                    else if (kVal > 4) dot.classList.add('red');
+                }
+                console.log(`Solar Updated via ${proxyUrl.split('?')[0]}: SFI=${sfi}, K=${k}`);
+                success = true;
+                break;
+            }
+        } catch (e) {
+            console.warn(`Solar Proxy failed: ${proxyUrl.split('?')[0]}`, e);
         }
-        console.log(`Solar Updated: SFI=${sfi}, K=${kindex}`);
-    } catch (e) {
-        console.warn("Solar fetch failed, retrying in 5 mins", e);
-        setTimeout(fetchSolarData, 300000); // Retry in 5 mins
+    }
+
+    if (!success) {
+        console.warn("All Solar proxies failed, retrying in 5 mins");
+        setTimeout(fetchSolarData, 300000); 
+    } else {
+        // Success? Refresh every 30 mins
+        setTimeout(fetchSolarData, 1800000);
     }
 }
 
