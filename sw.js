@@ -1,4 +1,4 @@
-const CACHE_NAME = 'spotter-pro-v12';
+const CACHE_NAME = 'spotter-pro-v13';
 const ASSETS = [
     './index.html',
     './icon.png',
