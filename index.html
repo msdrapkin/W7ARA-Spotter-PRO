@@ -606,7 +606,7 @@
                 🔄 Check for Updates
             </button>
             <div style="font-size: 0.65rem; color: #768390; text-align: center; opacity: 0.6;">
-                v14.0.0 // SPOTTER-PRO
+                v15.0.0 // SPOTTER-PRO
             </div>
         </div>
     </aside>
@@ -1078,7 +1078,15 @@ function updateState() {
 }
 
 document.querySelectorAll('.sidebar input, .sidebar select').forEach(el => {
-    el.addEventListener('input', updateState);
+    el.addEventListener('input', (e) => {
+        updateState();
+        // Persist all settings on every change
+        if (e.target.id === 'grid') localStorage.setItem('ara-spotter-grid', e.target.value);
+        if (e.target.id === 'callsign-filter') localStorage.setItem('ara-spotter-callsign', e.target.value);
+        if (e.target.id === 'dist-limit') localStorage.setItem('ara-spotter-dist', e.target.value);
+        if (e.target.id === 'band-filter') localStorage.setItem('ara-spotter-band', e.target.value);
+        if (e.target.id === 'mode-filter') localStorage.setItem('ara-spotter-mode', e.target.value);
+    });
 });
 
 document.getElementById('pota-toggle').onclick = (e) => {
@@ -1175,24 +1183,34 @@ function updateCountdown() {
 
 // Initial Launch
 window.onload = async () => {
-    // Check if we have a saved grid
+    // Load all saved settings
     const savedGrid = localStorage.getItem('ara-spotter-grid');
     if (savedGrid) {
         document.getElementById('grid').value = savedGrid;
         state.myCoords = gridToCoords(savedGrid);
     }
+
+    const savedCallsign = localStorage.getItem('ara-spotter-callsign');
+    if (savedCallsign) document.getElementById('callsign-filter').value = savedCallsign;
+
+    const savedDist = localStorage.getItem('ara-spotter-dist');
+    if (savedDist) document.getElementById('dist-limit').value = savedDist;
+
+    const savedBand = localStorage.getItem('ara-spotter-band');
+    if (savedBand) document.getElementById('band-filter').value = savedBand;
+
+    const savedMode = localStorage.getItem('ara-spotter-mode');
+    if (savedMode) document.getElementById('mode-filter').value = savedMode;
     
+    updateState(); // Sync internal state with loaded values
     await fetchSpots();
-    state.initialized = true; // Enable audio alerts after first fetch
+    state.initialized = true;
     fetchSolarData();
     setInterval(updateCountdown, 1000);
-    setInterval(fetchSolarData, 1800000); // 30 mins
+    setInterval(fetchSolarData, 1800000);
 };
 
-// Persist grid
-document.getElementById('grid').addEventListener('change', (e) => {
-    localStorage.setItem('ara-spotter-grid', e.target.value);
-});
+// Removed the old single-item change listener since we now persist all items in the main forEach loop above.
 
 // --- PWA Registration ---
 if ('serviceWorker' in navigator) {
