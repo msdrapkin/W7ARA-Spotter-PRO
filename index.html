@@ -649,7 +649,7 @@ function toggleModal(id) {
 const state = {
     potaEnabled: true,
     sotaEnabled: true,
-    myCoords: null,
+    myCoords: { lat: 33.4484, lon: -112.0740 }, // Default to Phoenix (DM33) until user sets grid
     knownSpots: new Set(),
     initialized: false,
     filters: { dist: 5000, band: 'all', mode: 'all', callsign: '' },
@@ -946,8 +946,9 @@ async function fetchSpots() {
         if (state.sotaEnabled) {
             const r = await fetch('https://api2.sota.org.uk/api/spots/100');
             const d = await r.json();
-            d.forEach(s => {
-                // Extract summit name from details (e.g., "High Peak, 1114m" -> "High Peak")
+            if (Array.isArray(d)) {
+                d.forEach(s => {
+                // Extract summit name safely
                 let sName = s.summitName || '';
                 if (!sName && s.summitDetails) {
                     sName = s.summitDetails.split(',')[0].trim();
@@ -968,10 +969,12 @@ async function fetchSpots() {
                 });
                 
                 // Trigger Background Lookup for Peak Precision
-                const [assoc, summit] = [s.associationCode, s.summitCode];
+                const assoc = s.associationCode;
+                const summit = s.summitCode;
                 if (assoc && summit) fetchSotaSummit(assoc, summit);
             });
         }
+    }
 
         window.currentSpots = allSpots;
         renderSpots(allSpots);
